@@ -43,3 +43,7 @@
 ## Melhorias
 
 - [x] Melhorar logotipo com design mais moderno e profissional
+- [x] Gerar imagens ilustrativas para o app (hero, features, etc)
+- [x] Redesenhar landing page com visual mais moderno e atrativo
+- [x] Adicionar ilustrações e elementos visuais às páginas internas
+- [x] Melhorar animações e micro-interações
