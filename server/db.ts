@@ -1,6 +1,6 @@
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, userProfiles, meals, InsertUserProfile, InsertMeal, UserProfile, Meal } from "../drizzle/schema";
+import { InsertUser, users, userProfiles, meals, weightHistory, InsertUserProfile, InsertMeal, UserProfile, Meal, InsertWeightHistory, WeightHistory } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -36,7 +36,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email", "loginMethod", "username"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -90,6 +90,15 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function updateUserOnboarding(userId: number, completed: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(users)
+    .set({ onboardingCompleted: completed ? 1 : 0 })
+    .where(eq(users.id, userId));
+}
+
 // ============ USER PROFILE FUNCTIONS ============
 
 export async function getUserProfile(userId: number): Promise<UserProfile | undefined> {
@@ -106,6 +115,13 @@ export async function upsertUserProfile(profile: InsertUserProfile): Promise<Use
 
   await db.insert(userProfiles).values(profile).onDuplicateKeyUpdate({
     set: {
+      sex: profile.sex,
+      birthDate: profile.birthDate,
+      height: profile.height,
+      currentWeight: profile.currentWeight,
+      targetWeight: profile.targetWeight,
+      activityType: profile.activityType,
+      activityLevel: profile.activityLevel,
       dailyCalorieGoal: profile.dailyCalorieGoal,
       dailyProteinGoal: profile.dailyProteinGoal,
       dailyCarbsGoal: profile.dailyCarbsGoal,
@@ -116,6 +132,69 @@ export async function upsertUserProfile(profile: InsertUserProfile): Promise<Use
   });
 
   return getUserProfile(profile.userId);
+}
+
+export async function updateUserProfile(
+  userId: number,
+  updates: Partial<InsertUserProfile>
+): Promise<UserProfile | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  await db.update(userProfiles)
+    .set(updates)
+    .where(eq(userProfiles.userId, userId));
+
+  return getUserProfile(userId);
+}
+
+// ============ WEIGHT HISTORY FUNCTIONS ============
+
+export async function addWeightRecord(record: InsertWeightHistory): Promise<WeightHistory | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db.insert(weightHistory).values(record);
+  const insertId = result[0].insertId;
+  
+  const created = await db.select().from(weightHistory).where(eq(weightHistory.id, insertId)).limit(1);
+  return created[0];
+}
+
+export async function getWeightHistory(userId: number, limit = 100): Promise<WeightHistory[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(weightHistory)
+    .where(eq(weightHistory.userId, userId))
+    .orderBy(desc(weightHistory.recordedAt))
+    .limit(limit);
+}
+
+export async function getWeightProgress(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const history = await db.select().from(weightHistory)
+    .where(eq(weightHistory.userId, userId))
+    .orderBy(weightHistory.recordedAt);
+
+  if (history.length < 2) return null;
+
+  const firstRecord = history[0];
+  const lastRecord = history[history.length - 1];
+  const totalChange = Number(lastRecord.weight) - Number(firstRecord.weight);
+  const daysDiff = Math.ceil((new Date(lastRecord.recordedAt).getTime() - new Date(firstRecord.recordedAt).getTime()) / (1000 * 60 * 60 * 24));
+  const avgChangePerDay = daysDiff > 0 ? totalChange / daysDiff : 0;
+
+  return {
+    history,
+    totalChange,
+    daysDiff,
+    avgChangePerDay,
+    startWeight: Number(firstRecord.weight),
+    currentWeight: Number(lastRecord.weight),
+  };
 }
 
 // ============ MEAL FUNCTIONS ============
@@ -211,7 +290,6 @@ export async function getWeeklyNutritionSummary(userId: number) {
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - 7);
 
-  // Use raw SQL to avoid GROUP BY issues with MySQL strict mode
   const result = await db.execute(sql`
     SELECT 
       DATE(mealTime) as date,

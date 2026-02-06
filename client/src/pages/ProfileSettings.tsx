@@ -1,0 +1,450 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { motion } from "framer-motion";
+import { 
+  Settings, 
+  User, 
+  Target, 
+  Scale, 
+  Dumbbell,
+  Save,
+  Loader2,
+  Plus,
+  X
+} from "lucide-react";
+
+const activityTypes = [
+  { value: "sedentary", label: "Sedentário", icon: "🛋️" },
+  { value: "football", label: "Futebol", icon: "⚽" },
+  { value: "gym", label: "Academia", icon: "🏋️" },
+  { value: "basketball", label: "Basquete", icon: "🏀" },
+  { value: "dance", label: "Dança", icon: "💃" },
+  { value: "running", label: "Corrida", icon: "🏃" },
+  { value: "swimming", label: "Natação", icon: "🏊" },
+  { value: "cycling", label: "Ciclismo", icon: "🚴" },
+  { value: "other", label: "Outro", icon: "🎯" },
+];
+
+const dietaryOptions = [
+  "Vegetariano",
+  "Vegano",
+  "Sem Glúten",
+  "Sem Lactose",
+  "Low Carb",
+  "Keto",
+  "Mediterrânea",
+  "Paleo",
+];
+
+const allergyOptions = [
+  "Amendoim",
+  "Nozes",
+  "Leite",
+  "Ovos",
+  "Trigo",
+  "Soja",
+  "Peixe",
+  "Frutos do Mar",
+  "Gergelim",
+];
+
+export default function ProfileSettings() {
+  const { user } = useAuth();
+  const { data: profile, isLoading, refetch } = trpc.profile.get.useQuery();
+  const updateMutation = trpc.profile.update.useMutation();
+  const addWeightMutation = trpc.weight.add.useMutation();
+
+  const [formData, setFormData] = useState({
+    height: "",
+    currentWeight: "",
+    targetWeight: "",
+    activityType: "",
+    dailyCalorieGoal: "",
+    dailyProteinGoal: "",
+    dailyCarbsGoal: "",
+    dailyFatGoal: "",
+    dietaryPreferences: [] as string[],
+    allergies: [] as string[],
+  });
+
+  const [newWeight, setNewWeight] = useState("");
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        height: (profile as any).height?.toString() || "",
+        currentWeight: (profile as any).currentWeight?.toString() || "",
+        targetWeight: (profile as any).targetWeight?.toString() || "",
+        activityType: (profile as any).activityType || "",
+        dailyCalorieGoal: profile.dailyCalorieGoal?.toString() || "",
+        dailyProteinGoal: profile.dailyProteinGoal?.toString() || "",
+        dailyCarbsGoal: profile.dailyCarbsGoal?.toString() || "",
+        dailyFatGoal: profile.dailyFatGoal?.toString() || "",
+        dietaryPreferences: profile.dietaryPreferences || [],
+        allergies: profile.allergies || [],
+      });
+    }
+  }, [profile]);
+
+  const handleSave = async () => {
+    try {
+      await updateMutation.mutateAsync({
+        height: formData.height ? Number(formData.height) : undefined,
+        currentWeight: formData.currentWeight ? Number(formData.currentWeight) : undefined,
+        targetWeight: formData.targetWeight ? Number(formData.targetWeight) : undefined,
+        activityType: formData.activityType as any || undefined,
+        dailyCalorieGoal: formData.dailyCalorieGoal ? Number(formData.dailyCalorieGoal) : undefined,
+        dailyProteinGoal: formData.dailyProteinGoal ? Number(formData.dailyProteinGoal) : undefined,
+        dailyCarbsGoal: formData.dailyCarbsGoal ? Number(formData.dailyCarbsGoal) : undefined,
+        dailyFatGoal: formData.dailyFatGoal ? Number(formData.dailyFatGoal) : undefined,
+        dietaryPreferences: formData.dietaryPreferences,
+        allergies: formData.allergies,
+      });
+      toast.success("Configurações salvas com sucesso!");
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao salvar configurações");
+    }
+  };
+
+  const handleAddWeight = async () => {
+    if (!newWeight) return;
+    try {
+      await addWeightMutation.mutateAsync({ weight: Number(newWeight) });
+      toast.success("Peso registrado com sucesso!");
+      setNewWeight("");
+      setFormData(prev => ({ ...prev, currentWeight: newWeight }));
+      refetch();
+    } catch (error) {
+      toast.error("Erro ao registrar peso");
+    }
+  };
+
+  const togglePreference = (pref: string) => {
+    setFormData(prev => ({
+      ...prev,
+      dietaryPreferences: prev.dietaryPreferences.includes(pref)
+        ? prev.dietaryPreferences.filter(p => p !== pref)
+        : [...prev.dietaryPreferences, pref],
+    }));
+  };
+
+  const toggleAllergy = (allergy: string) => {
+    setFormData(prev => ({
+      ...prev,
+      allergies: prev.allergies.includes(allergy)
+        ? prev.allergies.filter(a => a !== allergy)
+        : [...prev.allergies, allergy],
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      {/* User Info */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-emerald-500" />
+              Informações Pessoais
+            </CardTitle>
+            <CardDescription>
+              Seus dados básicos de perfil
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Nome</Label>
+                <Input value={user?.name || ""} disabled className="mt-1 bg-gray-50" />
+              </div>
+              <div>
+                <Label>Email</Label>
+                <Input value={user?.email || ""} disabled className="mt-1 bg-gray-50" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Body Metrics */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5 text-emerald-500" />
+              Medidas Corporais
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="height">Altura (cm)</Label>
+                <Input
+                  id="height"
+                  type="number"
+                  value={formData.height}
+                  onChange={(e) => setFormData(prev => ({ ...prev, height: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="currentWeight">Peso Atual (kg)</Label>
+                <Input
+                  id="currentWeight"
+                  type="number"
+                  step="0.1"
+                  value={formData.currentWeight}
+                  onChange={(e) => setFormData(prev => ({ ...prev, currentWeight: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="targetWeight">Peso Meta (kg)</Label>
+                <Input
+                  id="targetWeight"
+                  type="number"
+                  step="0.1"
+                  value={formData.targetWeight}
+                  onChange={(e) => setFormData(prev => ({ ...prev, targetWeight: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            {/* Quick Weight Update */}
+            <div className="p-4 bg-emerald-50 rounded-lg">
+              <Label className="text-emerald-700">Registrar Novo Peso</Label>
+              <div className="flex gap-2 mt-2">
+                <Input
+                  type="number"
+                  step="0.1"
+                  placeholder="Ex: 72.5"
+                  value={newWeight}
+                  onChange={(e) => setNewWeight(e.target.value)}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={handleAddWeight}
+                  disabled={!newWeight || addWeightMutation.isPending}
+                  className="bg-emerald-500 hover:bg-emerald-600"
+                >
+                  {addWeightMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Activity Type */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Dumbbell className="h-5 w-5 text-emerald-500" />
+              Atividade Física
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+              {activityTypes.map((activity) => (
+                <button
+                  key={activity.value}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, activityType: activity.value }))}
+                  className={`p-3 rounded-xl border-2 transition-all text-center ${
+                    formData.activityType === activity.value
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200 hover:border-emerald-300"
+                  }`}
+                >
+                  <span className="text-2xl block mb-1">{activity.icon}</span>
+                  <span className="text-xs font-medium">{activity.label}</span>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Nutrition Goals */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-emerald-500" />
+              Metas Nutricionais Diárias
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="dailyCalorieGoal">Calorias (kcal)</Label>
+                <Input
+                  id="dailyCalorieGoal"
+                  type="number"
+                  value={formData.dailyCalorieGoal}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dailyCalorieGoal: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dailyProteinGoal">Proteína (g)</Label>
+                <Input
+                  id="dailyProteinGoal"
+                  type="number"
+                  value={formData.dailyProteinGoal}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dailyProteinGoal: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dailyCarbsGoal">Carboidratos (g)</Label>
+                <Input
+                  id="dailyCarbsGoal"
+                  type="number"
+                  value={formData.dailyCarbsGoal}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dailyCarbsGoal: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="dailyFatGoal">Gordura (g)</Label>
+                <Input
+                  id="dailyFatGoal"
+                  type="number"
+                  value={formData.dailyFatGoal}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dailyFatGoal: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Dietary Preferences */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-emerald-500" />
+              Preferências Alimentares
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="mb-2 block">Dietas</Label>
+              <div className="flex flex-wrap gap-2">
+                {dietaryOptions.map((pref) => (
+                  <Badge
+                    key={pref}
+                    variant={formData.dietaryPreferences.includes(pref) ? "default" : "outline"}
+                    className={`cursor-pointer transition-all ${
+                      formData.dietaryPreferences.includes(pref)
+                        ? "bg-emerald-500 hover:bg-emerald-600"
+                        : "hover:bg-emerald-50"
+                    }`}
+                    onClick={() => togglePreference(pref)}
+                  >
+                    {pref}
+                    {formData.dietaryPreferences.includes(pref) && (
+                      <X className="h-3 w-3 ml-1" />
+                    )}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-2 block">Alergias / Restrições</Label>
+              <div className="flex flex-wrap gap-2">
+                {allergyOptions.map((allergy) => (
+                  <Badge
+                    key={allergy}
+                    variant={formData.allergies.includes(allergy) ? "default" : "outline"}
+                    className={`cursor-pointer transition-all ${
+                      formData.allergies.includes(allergy)
+                        ? "bg-red-500 hover:bg-red-600"
+                        : "hover:bg-red-50"
+                    }`}
+                    onClick={() => toggleAllergy(allergy)}
+                  >
+                    {allergy}
+                    {formData.allergies.includes(allergy) && (
+                      <X className="h-3 w-3 ml-1" />
+                    )}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Save Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+          className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 py-6 text-lg"
+        >
+          {updateMutation.isPending ? (
+            <>
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Save className="h-5 w-5 mr-2" />
+              Salvar Configurações
+            </>
+          )}
+        </Button>
+      </motion.div>
+    </div>
+  );
+}

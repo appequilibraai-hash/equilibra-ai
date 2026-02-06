@@ -9,6 +9,8 @@ import { nanoid } from "nanoid";
 import {
   getUserProfile,
   upsertUserProfile,
+  updateUserProfile,
+  updateUserOnboarding,
   createMeal,
   getMealById,
   getUserMeals,
@@ -17,6 +19,9 @@ import {
   getWeeklyNutritionSummary,
   deleteMeal,
   getMealsByDateRange,
+  addWeightRecord,
+  getWeightHistory,
+  getWeightProgress,
 } from "./db";
 import { DetectedFood, Micronutrient } from "../drizzle/schema";
 
@@ -30,6 +35,86 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+  }),
+
+  // ============ ONBOARDING ============
+  onboarding: router({
+    complete: protectedProcedure
+      .input(z.object({
+        username: z.string().min(3).max(64),
+        sex: z.enum(["male", "female", "other"]),
+        birthDate: z.string(),
+        height: z.number().min(100).max(250),
+        currentWeight: z.number().min(30).max(300),
+        targetWeight: z.number().min(30).max(300),
+        activityType: z.enum(["sedentary", "football", "gym", "basketball", "dance", "running", "swimming", "cycling", "other"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Calculate recommended daily calories based on Harris-Benedict equation
+        const birthDate = new Date(input.birthDate);
+        const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        
+        let bmr: number;
+        if (input.sex === "male") {
+          bmr = 88.362 + (13.397 * input.currentWeight) + (4.799 * input.height) - (5.677 * age);
+        } else {
+          bmr = 447.593 + (9.247 * input.currentWeight) + (3.098 * input.height) - (4.330 * age);
+        }
+
+        // Activity multipliers
+        const activityMultipliers: Record<string, number> = {
+          sedentary: 1.2,
+          football: 1.725,
+          gym: 1.55,
+          basketball: 1.725,
+          dance: 1.55,
+          running: 1.725,
+          swimming: 1.725,
+          cycling: 1.55,
+          other: 1.375,
+        };
+
+        const tdee = Math.round(bmr * (activityMultipliers[input.activityType] || 1.375));
+        
+        // Adjust for weight goal
+        let dailyCalorieGoal = tdee;
+        if (input.targetWeight < input.currentWeight) {
+          dailyCalorieGoal = Math.max(1200, tdee - 500); // Deficit for weight loss
+        } else if (input.targetWeight > input.currentWeight) {
+          dailyCalorieGoal = tdee + 300; // Surplus for weight gain
+        }
+
+        // Calculate macro goals (balanced approach)
+        const dailyProteinGoal = Math.round(input.currentWeight * 1.6); // 1.6g per kg for active people
+        const dailyFatGoal = Math.round((dailyCalorieGoal * 0.25) / 9); // 25% from fat
+        const dailyCarbsGoal = Math.round((dailyCalorieGoal - (dailyProteinGoal * 4) - (dailyFatGoal * 9)) / 4);
+
+        // Create/update profile
+        await upsertUserProfile({
+          userId: ctx.user.id,
+          sex: input.sex,
+          birthDate: new Date(input.birthDate),
+          height: input.height,
+          currentWeight: String(input.currentWeight),
+          targetWeight: String(input.targetWeight),
+          activityType: input.activityType,
+          dailyCalorieGoal,
+          dailyProteinGoal,
+          dailyCarbsGoal,
+          dailyFatGoal,
+        });
+
+        // Add initial weight record
+        await addWeightRecord({
+          userId: ctx.user.id,
+          weight: String(input.currentWeight),
+        });
+
+        // Mark onboarding as complete
+        await updateUserOnboarding(ctx.user.id, true);
+
+        return { success: true, dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal };
+      }),
   }),
 
   // ============ USER PROFILE ============
@@ -49,7 +134,13 @@ export const appRouter = router({
 
     update: protectedProcedure
       .input(z.object({
-        dailyCalorieGoal: z.number().min(500).max(10000),
+        sex: z.enum(["male", "female", "other"]).optional(),
+        birthDate: z.string().optional(),
+        height: z.number().min(100).max(250).optional(),
+        currentWeight: z.number().min(30).max(300).optional(),
+        targetWeight: z.number().min(30).max(300).optional(),
+        activityType: z.enum(["sedentary", "football", "gym", "basketball", "dance", "running", "swimming", "cycling", "other"]).optional(),
+        dailyCalorieGoal: z.number().min(500).max(10000).optional(),
         dailyProteinGoal: z.number().min(0).max(500).optional(),
         dailyCarbsGoal: z.number().min(0).max(1000).optional(),
         dailyFatGoal: z.number().min(0).max(500).optional(),
@@ -57,11 +148,67 @@ export const appRouter = router({
         allergies: z.array(z.string()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        return upsertUserProfile({
+        const updates: Record<string, any> = { ...input };
+        if (input.birthDate) updates.birthDate = new Date(input.birthDate);
+        if (input.currentWeight) updates.currentWeight = String(input.currentWeight);
+        if (input.targetWeight) updates.targetWeight = String(input.targetWeight);
+        
+        return updateUserProfile(ctx.user.id, updates);
+      }),
+  }),
+
+  // ============ WEIGHT TRACKING ============
+  weight: router({
+    add: protectedProcedure
+      .input(z.object({
+        weight: z.number().min(30).max(300),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Also update current weight in profile
+        await updateUserProfile(ctx.user.id, { currentWeight: String(input.weight) });
+        return addWeightRecord({
           userId: ctx.user.id,
-          ...input,
+          weight: String(input.weight),
         });
       }),
+
+    history: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(365).default(100) }).optional())
+      .query(async ({ ctx, input }) => {
+        return getWeightHistory(ctx.user.id, input?.limit || 100);
+      }),
+
+    progress: protectedProcedure.query(async ({ ctx }) => {
+      const progress = await getWeightProgress(ctx.user.id);
+      const profile = await getUserProfile(ctx.user.id);
+      
+      if (!progress || !profile) {
+        return null;
+      }
+
+      // Calculate estimated time to reach goal
+      const targetWeight = Number(profile.targetWeight);
+      const currentWeight = progress.currentWeight;
+      const remainingChange = targetWeight - currentWeight;
+      
+      let estimatedDaysToGoal: number | null = null;
+      if (progress.avgChangePerDay !== 0) {
+        const isLosingWeight = remainingChange < 0;
+        const isOnTrack = (isLosingWeight && progress.avgChangePerDay < 0) || 
+                         (!isLosingWeight && progress.avgChangePerDay > 0);
+        
+        if (isOnTrack) {
+          estimatedDaysToGoal = Math.abs(Math.round(remainingChange / progress.avgChangePerDay));
+        }
+      }
+
+      return {
+        ...progress,
+        targetWeight,
+        remainingChange,
+        estimatedDaysToGoal,
+      };
+    }),
   }),
 
   // ============ MEALS ============
@@ -105,7 +252,82 @@ export const appRouter = router({
         return deleteMeal(input.id, ctx.user.id);
       }),
 
-    // Upload and analyze meal photo
+    // Analyze meal photo WITHOUT saving (for non-logged users or preview)
+    analyzeOnly: publicProcedure
+      .input(z.object({
+        imageBase64: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        // Upload image to S3 temporarily
+        const imageBuffer = Buffer.from(input.imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+        const fileKey = `temp/${nanoid()}.jpg`;
+        const { url: imageUrl } = await storagePut(fileKey, imageBuffer, 'image/jpeg');
+
+        // Analyze image with AI
+        const analysisResult = await analyzeFood(imageUrl);
+
+        return {
+          imageUrl,
+          ...analysisResult,
+        };
+      }),
+
+    // Save analyzed meal to diary (requires login)
+    save: protectedProcedure
+      .input(z.object({
+        imageUrl: z.string(),
+        mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]).default("snack"),
+        mealTime: z.string().optional(),
+        totalCalories: z.number(),
+        totalProtein: z.number(),
+        totalCarbs: z.number(),
+        totalFat: z.number(),
+        totalFiber: z.number(),
+        totalSugar: z.number(),
+        totalSodium: z.number(),
+        detectedFoods: z.array(z.object({
+          name: z.string(),
+          quantity: z.string(),
+          calories: z.number(),
+          protein: z.number(),
+          carbs: z.number(),
+          fat: z.number(),
+          confidence: z.number(),
+        })),
+        detectedSauces: z.array(z.string()),
+        detectedIngredients: z.array(z.string()),
+        micronutrients: z.array(z.object({
+          name: z.string(),
+          amount: z.number(),
+          unit: z.string(),
+          percentDailyValue: z.number().optional(),
+        })),
+        analysisNotes: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const meal = await createMeal({
+          userId: ctx.user.id,
+          imageUrl: input.imageUrl,
+          mealType: input.mealType,
+          mealTime: input.mealTime ? new Date(input.mealTime) : new Date(),
+          totalCalories: input.totalCalories,
+          totalProtein: String(input.totalProtein),
+          totalCarbs: String(input.totalCarbs),
+          totalFat: String(input.totalFat),
+          totalFiber: String(input.totalFiber),
+          totalSugar: String(input.totalSugar),
+          totalSodium: String(input.totalSodium),
+          detectedFoods: input.detectedFoods,
+          detectedSauces: input.detectedSauces,
+          detectedIngredients: input.detectedIngredients,
+          micronutrients: input.micronutrients,
+          analysisNotes: input.analysisNotes,
+        });
+
+        return meal;
+      }),
+
+    // Legacy: Upload and analyze meal photo (for backwards compatibility)
     analyze: protectedProcedure
       .input(z.object({
         imageBase64: z.string(),
@@ -113,15 +335,12 @@ export const appRouter = router({
         mealTime: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        // 1. Upload image to S3
         const imageBuffer = Buffer.from(input.imageBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
         const fileKey = `meals/${ctx.user.id}/${nanoid()}.jpg`;
         const { url: imageUrl } = await storagePut(fileKey, imageBuffer, 'image/jpeg');
 
-        // 2. Analyze image with AI
         const analysisResult = await analyzeFood(imageUrl);
 
-        // 3. Save meal to database
         const meal = await createMeal({
           userId: ctx.user.id,
           imageUrl,
@@ -199,7 +418,6 @@ export const appRouter = router({
         fat: Math.max(0, goals.fat - consumed.fat),
       };
 
-      // Determine next meal type based on time
       const hour = new Date().getHours();
       let nextMealType: string;
       if (hour < 10) nextMealType = "café da manhã";
@@ -207,12 +425,12 @@ export const appRouter = router({
       else if (hour < 18) nextMealType = "lanche da tarde";
       else nextMealType = "jantar";
 
-      // Get AI recommendations
       const recommendations = await getAIRecommendations(
         remaining,
         nextMealType,
         profile?.dietaryPreferences || [],
-        profile?.allergies || []
+        profile?.allergies || [],
+        profile?.activityType || "other"
       );
 
       return {
@@ -223,6 +441,25 @@ export const appRouter = router({
         recommendations,
         mealsToday: todayMeals.length,
       };
+    }),
+
+    // Sports nutrition recommendations
+    getSportsNutrition: protectedProcedure.query(async ({ ctx }) => {
+      const profile = await getUserProfile(ctx.user.id);
+      const dailySummary = await getDailyNutritionSummary(ctx.user.id, new Date());
+
+      if (!profile) {
+        return { recommendations: [], supplements: [] };
+      }
+
+      const consumed = {
+        calories: dailySummary?.totalCalories || 0,
+        protein: dailySummary?.totalProtein || 0,
+        carbs: dailySummary?.totalCarbs || 0,
+        fat: dailySummary?.totalFat || 0,
+      };
+
+      return getSportsNutritionRecommendations(profile, consumed);
     }),
   }),
 });
@@ -363,7 +600,6 @@ Retorne um JSON com a seguinte estrutura:
     return JSON.parse(content) as FoodAnalysisResult;
   } catch (error) {
     console.error("Food analysis error:", error);
-    // Return default values if analysis fails
     return {
       totalCalories: 0,
       totalProtein: 0,
@@ -403,11 +639,17 @@ async function getAIRecommendations(
   remaining: NutritionRemaining,
   mealType: string,
   preferences: string[],
-  allergies: string[]
+  allergies: string[],
+  activityType: string
 ): Promise<MealRecommendation[]> {
-  const systemPrompt = `Você é um nutricionista especialista em planejamento de refeições.
+  const systemPrompt = `Você é um nutricionista esportivo especialista em planejamento de refeições.
 Forneça recomendações de refeições saudáveis e equilibradas em português brasileiro.
-Considere as preferências alimentares e alergias do usuário.`;
+Considere as preferências alimentares, alergias e tipo de atividade física do usuário.
+Foque em refeições que otimizem a performance esportiva e recuperação muscular.`;
+
+  const activityContext = activityType !== "sedentary" 
+    ? `O usuário pratica ${activityType}, então priorize alimentos que auxiliem na performance e recuperação.`
+    : "";
 
   const userPrompt = `Com base nas seguintes informações, sugira 3 opções de refeições para ${mealType}:
 
@@ -416,6 +658,7 @@ Proteína restante: ${remaining.protein}g
 Carboidratos restantes: ${remaining.carbs}g
 Gordura restante: ${remaining.fat}g
 
+${activityContext}
 ${preferences.length > 0 ? `Preferências alimentares: ${preferences.join(", ")}` : ""}
 ${allergies.length > 0 ? `Alergias/Restrições: ${allergies.join(", ")}` : ""}
 
@@ -474,5 +717,104 @@ Retorne um JSON com array de 3 recomendações:
   } catch (error) {
     console.error("Recommendations error:", error);
     return [];
+  }
+}
+
+async function getSportsNutritionRecommendations(
+  profile: any,
+  consumed: { calories: number; protein: number; carbs: number; fat: number }
+) {
+  const systemPrompt = `Você é um nutricionista esportivo especializado em suplementação e otimização de performance.
+Analise o perfil do atleta e forneça recomendações personalizadas em português brasileiro.`;
+
+  const userPrompt = `Analise o perfil deste usuário e forneça recomendações de nutrição esportiva:
+
+Atividade física: ${profile.activityType}
+Peso atual: ${profile.currentWeight}kg
+Peso desejado: ${profile.targetWeight}kg
+Meta calórica diária: ${profile.dailyCalorieGoal} kcal
+
+Consumo de hoje:
+- Calorias: ${consumed.calories} kcal
+- Proteína: ${consumed.protein}g
+- Carboidratos: ${consumed.carbs}g
+- Gordura: ${consumed.fat}g
+
+Retorne um JSON com:
+{
+  "recommendations": [
+    {
+      "title": "Título da recomendação",
+      "description": "Descrição detalhada",
+      "priority": "alta" | "média" | "baixa"
+    }
+  ],
+  "supplements": [
+    {
+      "name": "Nome do suplemento",
+      "dosage": "Dosagem recomendada",
+      "timing": "Quando tomar",
+      "benefit": "Benefício principal"
+    }
+  ]
+}`;
+
+  try {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "sports_nutrition",
+          strict: true,
+          schema: {
+            type: "object",
+            properties: {
+              recommendations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    priority: { type: "string" }
+                  },
+                  required: ["title", "description", "priority"],
+                  additionalProperties: false
+                }
+              },
+              supplements: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    dosage: { type: "string" },
+                    timing: { type: "string" },
+                    benefit: { type: "string" }
+                  },
+                  required: ["name", "dosage", "timing", "benefit"],
+                  additionalProperties: false
+                }
+              }
+            },
+            required: ["recommendations", "supplements"],
+            additionalProperties: false
+          }
+        }
+      }
+    });
+
+    const message = response.choices[0]?.message;
+    const content = typeof message?.content === 'string' ? message.content : '';
+    if (!content) return { recommendations: [], supplements: [] };
+
+    return JSON.parse(content);
+  } catch (error) {
+    console.error("Sports nutrition error:", error);
+    return { recommendations: [], supplements: [] };
   }
 }

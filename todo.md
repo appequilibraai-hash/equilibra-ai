@@ -47,3 +47,32 @@
 - [x] Redesenhar landing page com visual mais moderno e atrativo
 - [x] Adicionar ilustrações e elementos visuais às páginas internas
 - [x] Melhorar animações e micro-interações
+
+## Reestruturação Conforme Novas Instruções
+
+### Navegação
+- [x] Menu fixo com apenas 3 itens + Logo (Logo, Sobre, Analisar Refeição, Login)
+- [x] Logo redireciona para página Analisar Refeição (Home)
+- [x] Após login, "Login" vira "Meu Perfil"
+
+### Página Analisar Refeição (Home)
+- [x] Hero section limpa com foco na ação
+- [x] Botão central grande "Fotografar Refeição" ou "Carregar da Galeria"
+- [x] Após análise: botões "Guardar Refeição no Diário" e "Sugerir Próximo Prato"
+- [x] Gatilho de login se usuário não estiver logado ao clicar nos botões
+
+### Página Sobre
+- [x] Landing page informativa
+- [x] Explicar a IA e benefícios
+- [x] Gráficos ilustrativos sobre saúde e tecnologia
+
+### Login e Registro (Onboarding)
+- [x] Formulário com Nome, Email, Senha, Nome de Usuário
+- [x] Dados biométricos: Sexo, Data Nascimento, Altura, Peso Atual, Peso Desejado
+- [x] Seletor visual de atividade física com cards (Futebol, Academia, Basquete, Dança, Corrida, Sedentário)
+
+### Área Logada (Dashboard)
+- [x] Aba Progresso: Gráfico de evolução do peso + Estimativa de peso futuro
+- [x] Aba Dados: Calendário/Timeline com diário alimentar
+- [x] Aba Recomendações: Nutricionista IA esportivo com sugestões
+- [x] Aba Configurações: Edição de perfil, senha, metas, notificações

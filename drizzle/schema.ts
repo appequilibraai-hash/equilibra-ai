@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, decimal, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -8,8 +8,10 @@ export const users = mysqlTable("users", {
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  username: varchar("username", { length: 64 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  onboardingCompleted: int("onboardingCompleted").default(0).notNull(), // 0 = false, 1 = true
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -19,23 +21,52 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 /**
- * User profile with nutritional goals and preferences
+ * User profile with biometric data, nutritional goals and preferences
  */
 export const userProfiles = mysqlTable("userProfiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
+  
+  // Biometric data
+  sex: mysqlEnum("sex", ["male", "female", "other"]),
+  birthDate: date("birthDate"),
+  height: int("height"), // cm
+  currentWeight: decimal("currentWeight", { precision: 5, scale: 2 }), // kg
+  targetWeight: decimal("targetWeight", { precision: 5, scale: 2 }), // kg
+  
+  // Physical activity
+  activityType: mysqlEnum("activityType", ["sedentary", "football", "gym", "basketball", "dance", "running", "swimming", "cycling", "other"]),
+  activityLevel: mysqlEnum("activityLevel", ["sedentary", "light", "moderate", "active", "very_active"]).default("moderate"),
+  
+  // Nutritional goals
   dailyCalorieGoal: int("dailyCalorieGoal").default(2000).notNull(),
   dailyProteinGoal: int("dailyProteinGoal").default(50), // grams
   dailyCarbsGoal: int("dailyCarbsGoal").default(250), // grams
   dailyFatGoal: int("dailyFatGoal").default(65), // grams
+  
+  // Preferences
   dietaryPreferences: json("dietaryPreferences").$type<string[]>(), // vegetarian, vegan, gluten-free, etc.
   allergies: json("allergies").$type<string[]>(),
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = typeof userProfiles.$inferInsert;
+
+/**
+ * Weight history for tracking progress
+ */
+export const weightHistory = mysqlTable("weightHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  weight: decimal("weight", { precision: 5, scale: 2 }).notNull(), // kg
+  recordedAt: timestamp("recordedAt").defaultNow().notNull(),
+});
+
+export type WeightHistory = typeof weightHistory.$inferSelect;
+export type InsertWeightHistory = typeof weightHistory.$inferInsert;
 
 /**
  * Meals table storing analyzed food photos

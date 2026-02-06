@@ -4,47 +4,64 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import DashboardLayout from "./components/DashboardLayout";
-import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import Analyze from "./pages/Analyze";
+import PublicLayout from "./components/PublicLayout";
+import ProfileLayout from "./components/ProfileLayout";
+import AnalyzeMeal from "./pages/AnalyzeMeal";
+import About from "./pages/About";
+import Onboarding from "./pages/Onboarding";
+import ProfileProgress from "./pages/ProfileProgress";
+import ProfileData from "./pages/ProfileData";
+import ProfileRecommendations from "./pages/ProfileRecommendations";
+import ProfileSettings from "./pages/ProfileSettings";
 import MealDetail from "./pages/MealDetail";
-import History from "./pages/History";
-import Progress from "./pages/Progress";
-import Recommendations from "./pages/Recommendations";
-import Settings from "./pages/Settings";
 
-function DashboardRoutes() {
+// Public routes with header navigation
+function PublicRoutes() {
   return (
-    <DashboardLayout>
+    <PublicLayout>
       <Switch>
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/analyze" component={Analyze} />
-        <Route path="/meal/:id" component={MealDetail} />
-        <Route path="/history" component={History} />
-        <Route path="/progress" component={Progress} />
-        <Route path="/recommendations" component={Recommendations} />
-        <Route path="/settings" component={Settings} />
+        <Route path="/" component={AnalyzeMeal} />
+        <Route path="/analyze" component={AnalyzeMeal} />
+        <Route path="/about" component={About} />
+        <Route path="/onboarding" component={Onboarding} />
         <Route component={NotFound} />
       </Switch>
-    </DashboardLayout>
+    </PublicLayout>
+  );
+}
+
+// Profile routes (logged in area) with tabs
+function ProfileRoutes() {
+  return (
+    <ProfileLayout>
+      <Switch>
+        <Route path="/profile" component={ProfileProgress} />
+        <Route path="/profile/progress" component={ProfileProgress} />
+        <Route path="/profile/data" component={ProfileData} />
+        <Route path="/profile/recommendations" component={ProfileRecommendations} />
+        <Route path="/profile/settings" component={ProfileSettings} />
+        <Route path="/profile/meal/:id" component={MealDetail} />
+        <Route component={NotFound} />
+      </Switch>
+    </ProfileLayout>
   );
 }
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      {/* Public routes */}
+      <Route path="/" component={PublicRoutes} />
+      <Route path="/analyze" component={PublicRoutes} />
+      <Route path="/about" component={PublicRoutes} />
+      <Route path="/onboarding" component={PublicRoutes} />
+      
+      {/* Profile routes (logged in) */}
+      <Route path="/profile" component={ProfileRoutes} />
+      <Route path="/profile/:rest*" component={ProfileRoutes} />
+      
+      {/* 404 */}
       <Route path="/404" component={NotFound} />
-      {/* Dashboard routes with layout */}
-      <Route path="/dashboard" component={DashboardRoutes} />
-      <Route path="/analyze" component={DashboardRoutes} />
-      <Route path="/meal/:id" component={DashboardRoutes} />
-      <Route path="/history" component={DashboardRoutes} />
-      <Route path="/progress" component={DashboardRoutes} />
-      <Route path="/recommendations" component={DashboardRoutes} />
-      <Route path="/settings" component={DashboardRoutes} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
