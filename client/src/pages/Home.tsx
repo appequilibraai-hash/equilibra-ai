@@ -63,7 +63,7 @@ export default function Home() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse">
-          <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/KjysyrPrcMHEAShv.jpeg" alt="Equilibra AI" className="w-16 h-16 rounded-xl" />
+          <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/erpgTEmjyYjDwKvH.png" alt="Equilibra AI" className="w-16 h-16 rounded-xl" />
         </div>
       </div>
     );
@@ -79,7 +79,7 @@ export default function Home() {
       <header className="container py-4">
         <nav className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/KjysyrPrcMHEAShv.jpeg" alt="Equilibra AI" className="w-10 h-10 rounded-xl" />
+            <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/erpgTEmjyYjDwKvH.png" alt="Equilibra AI" className="w-10 h-10 rounded-xl" />
             <span className="font-bold text-xl text-primary">Equilibra AI</span>
           </div>
           <Button onClick={() => window.location.href = getLoginUrl()}>
@@ -175,7 +175,7 @@ export default function Home() {
             <div className="relative">
               <div className="aspect-square rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 p-8 flex items-center justify-center">
                 <img 
-                  src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/KjysyrPrcMHEAShv.jpeg" 
+                  src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/erpgTEmjyYjDwKvH.png" 
                   alt="Equilibra AI" 
                   className="w-48 h-48 rounded-2xl shadow-2xl"
                 />
@@ -221,7 +221,7 @@ export default function Home() {
       <footer className="container py-8 border-t">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/KjysyrPrcMHEAShv.jpeg" alt="Equilibra AI" className="w-8 h-8 rounded-lg" />
+            <img src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/erpgTEmjyYjDwKvH.png" alt="Equilibra AI" className="w-8 h-8 rounded-lg" />
             <span className="font-semibold text-primary">Equilibra AI</span>
           </div>
           <p className="text-sm text-muted-foreground">

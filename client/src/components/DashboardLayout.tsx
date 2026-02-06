@@ -75,7 +75,7 @@ export default function DashboardLayout({
         <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
           <div className="flex flex-col items-center gap-6">
             <img 
-              src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/KjysyrPrcMHEAShv.jpeg" 
+              src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/erpgTEmjyYjDwKvH.png" 
               alt="Equilibra AI" 
               className="w-24 h-24 rounded-2xl shadow-lg"
             />
@@ -189,7 +189,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <img 
-                    src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/KjysyrPrcMHEAShv.jpeg" 
+                    src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/erpgTEmjyYjDwKvH.png" 
                     alt="Equilibra AI" 
                     className="w-8 h-8 rounded-lg"
                   />
@@ -272,7 +272,7 @@ function DashboardLayoutContent({
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex items-center gap-3">
                 <img 
-                  src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/KjysyrPrcMHEAShv.jpeg" 
+                  src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/erpgTEmjyYjDwKvH.png" 
                   alt="Equilibra AI" 
                   className="w-8 h-8 rounded-lg"
                 />

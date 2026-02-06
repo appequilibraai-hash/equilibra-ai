@@ -39,3 +39,7 @@
 - [x] Rotas tRPC para CRUD de refeições
 - [x] Integração com LLM para análise de imagens
 - [x] Sistema de upload de imagens para S3
+
+## Melhorias
+
+- [x] Melhorar logotipo com design mais moderno e profissional
