@@ -168,11 +168,11 @@ export default function ProfileRecommendations() {
                     </div>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-4 overflow-hidden">
                     <p className="text-xs font-medium text-gray-500 mb-2">Ingredientes:</p>
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 max-w-full">
                       {rec.ingredients.map((ing: string, j: number) => (
-                        <Badge key={j} variant="secondary" className="text-xs">
+                        <Badge key={j} variant="secondary" className="text-xs break-words max-w-full whitespace-normal">
                           {ing}
                         </Badge>
                       ))}

@@ -122,3 +122,7 @@
 - [x] Cálculo automático de metas (Harris-Benedict revisada)
 - [x] Metas calculadas trancadas com botão "Personalizar Metas"
 - [x] Blacklist de alimentos (restrições/alergias)
+
+## Correções de Layout
+
+- [x] Ingredientes não podem ultrapassar a borda - quebrar texto quando necessário
