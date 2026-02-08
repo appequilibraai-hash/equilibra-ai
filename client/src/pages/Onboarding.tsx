@@ -89,7 +89,11 @@ export default function Onboarding() {
         height: Number(formData.height),
         currentWeight: Number(formData.currentWeight),
         targetWeight: Number(formData.targetWeight),
-        activityType: formData.activityTypes.join(",") as any,
+        activityTypes: formData.activityTypes,
+        activityFrequencies: formData.activityTypes.reduce((acc: Record<string, number>, t: string) => {
+          if (t !== "sedentary") acc[t] = 3; // default 3 days/week
+          return acc;
+        }, {}),
       });
       toast.success("Perfil configurado com sucesso!");
       setLocation("/profile");

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
   User, Target, Scale, Dumbbell, Save, Loader2, Plus, X,
-  Pencil, Calculator, Ban, Settings, ShieldAlert,
+  Calculator, Ban, Settings, AlertTriangle,
 } from "lucide-react";
 
 const activityTypes = [
@@ -26,16 +26,6 @@ const activityTypes = [
   { value: "other", label: "Outro", icon: "🎯" },
 ];
 
-const dietaryOptions = [
-  "Vegetariano", "Vegano", "Sem Glúten", "Sem Lactose",
-  "Low Carb", "Keto", "Mediterrânea", "Paleo",
-];
-
-const allergyOptions = [
-  "Amendoim", "Nozes", "Leite", "Ovos", "Trigo",
-  "Soja", "Peixe", "Frutos do Mar", "Gergelim",
-];
-
 export default function ProfileSettings() {
   const { user } = useAuth();
   const { data: profile, isLoading, refetch } = trpc.profile.get.useQuery();
@@ -45,44 +35,158 @@ export default function ProfileSettings() {
 
   const [editMode, setEditMode] = useState(false);
   const [newBlacklistItem, setNewBlacklistItem] = useState("");
+  const [macroWarning, setMacroWarning] = useState("");
 
   const [formData, setFormData] = useState({
     height: "",
     currentWeight: "",
     targetWeight: "",
     activityTypes: [] as string[],
-    activityFrequency: "3",
+    activityFrequencies: {} as Record<string, number>,
     dailyCalorieGoal: "",
     dailyProteinGoal: "",
     dailyCarbsGoal: "",
     dailyFatGoal: "",
-    dietaryPreferences: [] as string[],
-    allergies: [] as string[],
     blacklistedFoods: [] as string[],
   });
 
   const [newWeight, setNewWeight] = useState("");
+  const [lastEditedMacro, setLastEditedMacro] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile) {
+      const types = (profile as any).activityType
+        ? (profile as any).activityType.split(",").filter(Boolean)
+        : [];
+      const freqs = (profile as any).activityFrequencies || {};
+      // Ensure all non-sedentary activities have a frequency
+      const normalizedFreqs: Record<string, number> = {};
+      types.forEach((t: string) => {
+        if (t !== "sedentary") {
+          normalizedFreqs[t] = freqs[t] || 3;
+        }
+      });
+
       setFormData({
         height: (profile as any).height?.toString() || "",
         currentWeight: (profile as any).currentWeight?.toString() || "",
         targetWeight: (profile as any).targetWeight?.toString() || "",
-        activityTypes: (profile as any).activityType
-          ? (profile as any).activityType.split(",").filter(Boolean)
-          : [],
-        activityFrequency: (profile as any).activityFrequency?.toString() || "3",
+        activityTypes: types,
+        activityFrequencies: normalizedFreqs,
         dailyCalorieGoal: profile.dailyCalorieGoal?.toString() || "",
         dailyProteinGoal: profile.dailyProteinGoal?.toString() || "",
         dailyCarbsGoal: profile.dailyCarbsGoal?.toString() || "",
         dailyFatGoal: profile.dailyFatGoal?.toString() || "",
-        dietaryPreferences: profile.dietaryPreferences || [],
-        allergies: profile.allergies || [],
         blacklistedFoods: (profile as any).blacklistedFoods || [],
       });
     }
   }, [profile]);
+
+  // Auto-calculate the 4th macro when 3 are set
+  const recalcFourthMacro = useCallback((data: typeof formData, editedField: string) => {
+    const cal = Number(data.dailyCalorieGoal);
+    const prot = Number(data.dailyProteinGoal);
+    const carbs = Number(data.dailyCarbsGoal);
+    const fat = Number(data.dailyFatGoal);
+
+    if (!cal || cal <= 0) {
+      setMacroWarning("");
+      return data;
+    }
+
+    // Count how many macros have values
+    const hasProt = data.dailyProteinGoal !== "" && prot > 0;
+    const hasCarbs = data.dailyCarbsGoal !== "" && carbs > 0;
+    const hasFat = data.dailyFatGoal !== "" && fat > 0;
+    const filledCount = [hasProt, hasCarbs, hasFat].filter(Boolean).length;
+
+    if (filledCount < 3) {
+      setMacroWarning("");
+      return data;
+    }
+
+    // All 3 macros are filled - calculate what the 4th should be
+    // Protein: 4 kcal/g, Carbs: 4 kcal/g, Fat: 9 kcal/g
+    const totalFromMacros = (prot * 4) + (carbs * 4) + (fat * 9);
+    const diff = Math.abs(totalFromMacros - cal);
+
+    if (diff > 50) {
+      // Adjust the last edited macro to fit
+      const updated = { ...data };
+      const remaining = cal - (editedField !== "dailyProteinGoal" ? prot * 4 : 0)
+                           - (editedField !== "dailyCarbsGoal" ? carbs * 4 : 0)
+                           - (editedField !== "dailyFatGoal" ? fat * 9 : 0);
+
+      if (editedField === "dailyCalorieGoal") {
+        // Recalculate carbs (most flexible)
+        const newCarbs = Math.max(0, Math.round((cal - (prot * 4) - (fat * 9)) / 4));
+        updated.dailyCarbsGoal = newCarbs.toString();
+        if (newCarbs < 0) {
+          setMacroWarning("Impossível atingir essa meta calórica com os macros atuais. Ajustado ao mais próximo possível.");
+          updated.dailyCarbsGoal = "0";
+          // Recalculate calories to match
+          const realCal = (prot * 4) + (fat * 9);
+          updated.dailyCalorieGoal = realCal.toString();
+        } else {
+          setMacroWarning("");
+        }
+      } else if (editedField === "dailyProteinGoal") {
+        const newVal = Math.max(0, Math.round(remaining / 4));
+        if (remaining < 0) {
+          setMacroWarning("O valor de proteína é muito alto para a meta calórica. Ajustado ao mais próximo possível.");
+          const maxProt = Math.max(0, Math.round((cal - (carbs * 4) - (fat * 9)) / 4));
+          updated.dailyProteinGoal = maxProt.toString();
+        } else {
+          setMacroWarning("");
+        }
+        // Recalculate carbs
+        const adjustedProt = Number(updated.dailyProteinGoal);
+        const newCarbs = Math.max(0, Math.round((cal - (adjustedProt * 4) - (fat * 9)) / 4));
+        updated.dailyCarbsGoal = newCarbs.toString();
+      } else if (editedField === "dailyCarbsGoal") {
+        // Recalculate fat
+        const newFat = Math.max(0, Math.round((cal - (prot * 4) - (carbs * 4)) / 9));
+        if (newFat < 0) {
+          setMacroWarning("O valor de carboidratos é muito alto para a meta calórica. Ajustado ao mais próximo possível.");
+          const maxCarbs = Math.max(0, Math.round((cal - (prot * 4) - (fat * 9)) / 4));
+          updated.dailyCarbsGoal = maxCarbs.toString();
+        } else {
+          updated.dailyFatGoal = newFat.toString();
+          setMacroWarning("");
+        }
+      } else if (editedField === "dailyFatGoal") {
+        // Recalculate carbs
+        const newCarbs = Math.max(0, Math.round((cal - (prot * 4) - (fat * 9)) / 4));
+        if (newCarbs < 0) {
+          setMacroWarning("O valor de gordura é muito alto para a meta calórica. Ajustado ao mais próximo possível.");
+          const maxFat = Math.max(0, Math.round((cal - (prot * 4) - (carbs * 4)) / 9));
+          updated.dailyFatGoal = maxFat.toString();
+        } else {
+          updated.dailyCarbsGoal = newCarbs.toString();
+          setMacroWarning("");
+        }
+      }
+
+      return updated;
+    }
+
+    setMacroWarning("");
+    return data;
+  }, []);
+
+  const handleMacroChange = (field: string, value: string) => {
+    setLastEditedMacro(field);
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      // Debounce recalculation
+      return updated;
+    });
+  };
+
+  // Recalculate on blur (when user finishes editing a macro field)
+  const handleMacroBlur = (field: string) => {
+    setFormData(prev => recalcFourthMacro(prev, field));
+  };
 
   const toggleActivity = (value: string) => {
     if (!editMode) return;
@@ -91,15 +195,27 @@ export default function ProfileSettings() {
         return {
           ...prev,
           activityTypes: prev.activityTypes.includes("sedentary") ? [] : ["sedentary"],
+          activityFrequencies: {},
         };
       }
       const withoutSedentary = prev.activityTypes.filter(t => t !== "sedentary");
+      const newFreqs = { ...prev.activityFrequencies };
       if (withoutSedentary.includes(value)) {
-        return { ...prev, activityTypes: withoutSedentary.filter(t => t !== value) };
+        delete newFreqs[value];
+        return { ...prev, activityTypes: withoutSedentary.filter(t => t !== value), activityFrequencies: newFreqs };
       } else {
-        return { ...prev, activityTypes: [...withoutSedentary, value] };
+        newFreqs[value] = 3; // default 3 days/week
+        return { ...prev, activityTypes: [...withoutSedentary, value], activityFrequencies: newFreqs };
       }
     });
+  };
+
+  const setActivityFrequency = (activity: string, freq: number) => {
+    if (!editMode) return;
+    setFormData(prev => ({
+      ...prev,
+      activityFrequencies: { ...prev.activityFrequencies, [activity]: freq },
+    }));
   };
 
   const handleRecalculate = async () => {
@@ -113,6 +229,7 @@ export default function ProfileSettings() {
           dailyCarbsGoal: result.dailyCarbsGoal.toString(),
           dailyFatGoal: result.dailyFatGoal.toString(),
         }));
+        setMacroWarning("");
         toast.success("Metas recalculadas automaticamente com base no seu perfil!");
         refetch();
       } else {
@@ -130,13 +247,11 @@ export default function ProfileSettings() {
         currentWeight: formData.currentWeight ? Number(formData.currentWeight) : undefined,
         targetWeight: formData.targetWeight ? Number(formData.targetWeight) : undefined,
         activityType: formData.activityTypes.length > 0 ? formData.activityTypes.join(",") as any : undefined,
-        activityFrequency: formData.activityFrequency ? Number(formData.activityFrequency) : undefined,
+        activityFrequency: undefined, // deprecated, using activityFrequencies now
         dailyCalorieGoal: formData.dailyCalorieGoal ? Number(formData.dailyCalorieGoal) : undefined,
         dailyProteinGoal: formData.dailyProteinGoal ? Number(formData.dailyProteinGoal) : undefined,
         dailyCarbsGoal: formData.dailyCarbsGoal ? Number(formData.dailyCarbsGoal) : undefined,
         dailyFatGoal: formData.dailyFatGoal ? Number(formData.dailyFatGoal) : undefined,
-        dietaryPreferences: formData.dietaryPreferences,
-        allergies: formData.allergies,
         blacklistedFoods: formData.blacklistedFoods,
       });
       toast.success("Configurações salvas com sucesso!");
@@ -144,6 +259,18 @@ export default function ProfileSettings() {
       refetch();
     } catch {
       toast.error("Erro ao salvar configurações");
+    }
+  };
+
+  // Auto-save blacklist immediately
+  const saveBlacklist = async (foods: string[]) => {
+    try {
+      await updateMutation.mutateAsync({
+        blacklistedFoods: foods,
+      });
+      refetch();
+    } catch {
+      toast.error("Erro ao salvar lista de alimentos");
     }
   };
 
@@ -167,43 +294,18 @@ export default function ProfileSettings() {
       toast.error("Este alimento já está na lista.");
       return;
     }
-    setFormData(prev => ({
-      ...prev,
-      blacklistedFoods: [...prev.blacklistedFoods, item],
-    }));
+    const newFoods = [...formData.blacklistedFoods, item];
+    setFormData(prev => ({ ...prev, blacklistedFoods: newFoods }));
     setNewBlacklistItem("");
-    setEditMode(true);
+    saveBlacklist(newFoods);
+    toast.success(`"${item}" adicionado à lista.`);
   };
 
   const removeBlacklistItem = (item: string) => {
-    setFormData(prev => ({
-      ...prev,
-      blacklistedFoods: prev.blacklistedFoods.filter(f => f !== item),
-    }));
-    // Auto-save blacklist changes
-    setTimeout(() => {
-      setEditMode(true);
-    }, 0);
-  };
-
-  const togglePreference = (pref: string) => {
-    if (!editMode) return;
-    setFormData(prev => ({
-      ...prev,
-      dietaryPreferences: prev.dietaryPreferences.includes(pref)
-        ? prev.dietaryPreferences.filter(p => p !== pref)
-        : [...prev.dietaryPreferences, pref],
-    }));
-  };
-
-  const toggleAllergy = (allergy: string) => {
-    if (!editMode) return;
-    setFormData(prev => ({
-      ...prev,
-      allergies: prev.allergies.includes(allergy)
-        ? prev.allergies.filter(a => a !== allergy)
-        : [...prev.allergies, allergy],
-    }));
+    const newFoods = formData.blacklistedFoods.filter(f => f !== item);
+    setFormData(prev => ({ ...prev, blacklistedFoods: newFoods }));
+    saveBlacklist(newFoods);
+    toast.success(`"${item}" removido da lista.`);
   };
 
   if (isLoading) {
@@ -214,18 +316,30 @@ export default function ProfileSettings() {
     );
   }
 
+  const isSedentary = formData.activityTypes.includes("sedentary");
+  const selectedActivities = formData.activityTypes.filter(t => t !== "sedentary");
+
+  // Calculate macro total for display
+  const macroCalories = (Number(formData.dailyProteinGoal) * 4) + (Number(formData.dailyCarbsGoal) * 4) + (Number(formData.dailyFatGoal) * 9);
+
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Edit Mode Toggle */}
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Settings className="h-5 w-5 text-emerald-500" />
             Configurações
           </h2>
-
+          <Button
+            variant={editMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setEditMode(!editMode)}
+            className={editMode ? "bg-emerald-500 hover:bg-emerald-600" : ""}
+          >
+            {editMode ? "Editando..." : "Editar Perfil"}
+          </Button>
         </div>
-
       </motion.div>
 
       {/* User Info */}
@@ -329,7 +443,7 @@ export default function ProfileSettings() {
         </Card>
       </motion.div>
 
-      {/* Activity Type + Frequency */}
+      {/* Activity Type + Individual Frequency */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
         <Card>
           <CardHeader>
@@ -369,33 +483,44 @@ export default function ProfileSettings() {
               })}
             </div>
 
-            {/* Activity Frequency */}
-            {!formData.activityTypes.includes("sedentary") && formData.activityTypes.length > 0 && (
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <Label className="text-blue-700 mb-2 block">Frequência semanal</Label>
-                <Select
-                  value={formData.activityFrequency}
-                  onValueChange={(v) => editMode && setFormData(prev => ({ ...prev, activityFrequency: v }))}
-                  disabled={!editMode}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5, 6, 7].map(n => (
-                      <SelectItem key={n} value={n.toString()}>
-                        {n} {n === 1 ? "dia" : "dias"} por semana
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {/* Individual Frequency per Activity */}
+            {!isSedentary && selectedActivities.length > 0 && (
+              <div className="space-y-3 p-4 bg-blue-50 rounded-lg">
+                <Label className="text-blue-700 font-semibold">Frequência semanal por atividade</Label>
+                <p className="text-xs text-blue-500">Defina quantos dias por semana pratica cada atividade.</p>
+                {selectedActivities.map((actValue) => {
+                  const act = activityTypes.find(a => a.value === actValue);
+                  if (!act) return null;
+                  return (
+                    <div key={actValue} className="flex items-center gap-3 bg-white p-3 rounded-lg">
+                      <span className="text-lg">{act.icon}</span>
+                      <span className="text-sm font-medium flex-1">{act.label}</span>
+                      <Select
+                        value={(formData.activityFrequencies[actValue] || 3).toString()}
+                        onValueChange={(v) => setActivityFrequency(actValue, Number(v))}
+                        disabled={!editMode}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6, 7].map(n => (
+                            <SelectItem key={n} value={n.toString()}>
+                              {n}x / semana
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Nutrition Goals with Auto-Calculate */}
+      {/* Nutrition Goals with Interlinked Macros */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card>
           <CardHeader>
@@ -416,65 +541,98 @@ export default function ProfileSettings() {
                 ) : (
                   <Calculator className="h-4 w-4 mr-1" />
                 )}
-                Calcular Automaticamente
+                Calcular
               </Button>
             </div>
             <CardDescription>
-              Defina manualmente ou clique em "Calcular Automaticamente" para usar a fórmula Harris-Benedict com base nos seus dados.
+              Defina manualmente ou clique em "Calcular" para usar a fórmula Harris-Benedict. Ao alterar 3 macronutrientes, o 4o é ajustado automaticamente.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <Label htmlFor="dailyCalorieGoal">Calorias (kcal)</Label>
+                <Label htmlFor="dailyCalorieGoal" className="text-xs">Calorias (kcal)</Label>
                 <Input
                   id="dailyCalorieGoal"
                   type="number"
                   value={formData.dailyCalorieGoal}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dailyCalorieGoal: e.target.value }))}
+                  onChange={(e) => handleMacroChange("dailyCalorieGoal", e.target.value)}
+                  onBlur={() => handleMacroBlur("dailyCalorieGoal")}
                   disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : ""}`}
+                  className={`mt-1 ${!editMode ? "bg-gray-50" : "border-amber-300 focus:ring-amber-500"}`}
                 />
               </div>
               <div>
-                <Label htmlFor="dailyProteinGoal">Proteína (g)</Label>
+                <Label htmlFor="dailyProteinGoal" className="text-xs">Proteína (g)</Label>
                 <Input
                   id="dailyProteinGoal"
                   type="number"
                   value={formData.dailyProteinGoal}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dailyProteinGoal: e.target.value }))}
+                  onChange={(e) => handleMacroChange("dailyProteinGoal", e.target.value)}
+                  onBlur={() => handleMacroBlur("dailyProteinGoal")}
                   disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : ""}`}
+                  className={`mt-1 ${!editMode ? "bg-gray-50" : "border-blue-300 focus:ring-blue-500"}`}
                 />
+                <span className="text-[10px] text-gray-400">{Number(formData.dailyProteinGoal) * 4} kcal</span>
               </div>
               <div>
-                <Label htmlFor="dailyCarbsGoal">Carboidratos (g)</Label>
+                <Label htmlFor="dailyCarbsGoal" className="text-xs">Carboidratos (g)</Label>
                 <Input
                   id="dailyCarbsGoal"
                   type="number"
                   value={formData.dailyCarbsGoal}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dailyCarbsGoal: e.target.value }))}
+                  onChange={(e) => handleMacroChange("dailyCarbsGoal", e.target.value)}
+                  onBlur={() => handleMacroBlur("dailyCarbsGoal")}
                   disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : ""}`}
+                  className={`mt-1 ${!editMode ? "bg-gray-50" : "border-green-300 focus:ring-green-500"}`}
                 />
+                <span className="text-[10px] text-gray-400">{Number(formData.dailyCarbsGoal) * 4} kcal</span>
               </div>
               <div>
-                <Label htmlFor="dailyFatGoal">Gordura (g)</Label>
+                <Label htmlFor="dailyFatGoal" className="text-xs">Gordura (g)</Label>
                 <Input
                   id="dailyFatGoal"
                   type="number"
                   value={formData.dailyFatGoal}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dailyFatGoal: e.target.value }))}
+                  onChange={(e) => handleMacroChange("dailyFatGoal", e.target.value)}
+                  onBlur={() => handleMacroBlur("dailyFatGoal")}
                   disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : ""}`}
+                  className={`mt-1 ${!editMode ? "bg-gray-50" : "border-orange-300 focus:ring-orange-500"}`}
                 />
+                <span className="text-[10px] text-gray-400">{Number(formData.dailyFatGoal) * 9} kcal</span>
               </div>
             </div>
+
+            {/* Macro balance indicator */}
+            {formData.dailyCalorieGoal && (
+              <div className={`p-3 rounded-lg text-sm ${
+                Math.abs(macroCalories - Number(formData.dailyCalorieGoal)) <= 50
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-amber-50 text-amber-700"
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span>Total dos macros: <strong>{macroCalories} kcal</strong></span>
+                  <span>Meta: <strong>{formData.dailyCalorieGoal} kcal</strong></span>
+                </div>
+                {Math.abs(macroCalories - Number(formData.dailyCalorieGoal)) > 50 && (
+                  <p className="text-xs mt-1 opacity-75">
+                    Diferença de {Math.abs(macroCalories - Number(formData.dailyCalorieGoal))} kcal. Ajuste os macros ou recalcule.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {macroWarning && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-700">{macroWarning}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Alimentos a Evitar */}
+      {/* Alimentos a Evitar - Always editable, auto-saves */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <Card>
           <CardHeader>
@@ -483,7 +641,7 @@ export default function ProfileSettings() {
               Deseja evitar algum alimento?
             </CardTitle>
             <CardDescription>
-              Adicione alimentos que serão excluídos das sugestões de refeição.
+              Alimentos adicionados aqui ficam guardados permanentemente até que você os remova manualmente.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -530,10 +688,8 @@ export default function ProfileSettings() {
         </Card>
       </motion.div>
 
-
-
-      {/* Save Button */}
-      {(editMode || formData.blacklistedFoods.length > 0) && (
+      {/* Save Button - only for profile edits, not blacklist */}
+      {editMode && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
           <Button
             onClick={handleSave}

@@ -35,8 +35,9 @@ export const userProfiles = mysqlTable("userProfiles", {
   targetWeight: decimal("targetWeight", { precision: 5, scale: 2 }), // kg
   
   // Physical activity
-  activityType: mysqlEnum("activityType", ["sedentary", "football", "gym", "basketball", "dance", "running", "swimming", "cycling", "other"]),
+  activityType: text("activityType"), // comma-separated list of activities
   activityLevel: mysqlEnum("activityLevel", ["sedentary", "light", "moderate", "active", "very_active"]).default("moderate"),
+  activityFrequencies: json("activityFrequencies").$type<Record<string, number>>(), // { "gym": 5, "running": 3 }
   
   // Nutritional goals
   dailyCalorieGoal: int("dailyCalorieGoal").default(2000).notNull(),

@@ -131,3 +131,6 @@
 - [x] Remover botão desnecessário na linha ~222 do ProfileSettings
 - [x] Renomear blacklist para "Deseja evitar algum alimento?" com barra de adição e opção de remover
 - [x] Remover seção desnecessária na linha ~536 do ProfileSettings
+- [x] Frequência semanal individual para cada atividade selecionada
+- [x] Macros interligados: ao definir 3, o 4o é calculado automaticamente (ou ajustado ao mais próximo)
+- [x] Blacklist persistente: alimentos ficam guardados até o usuário remover manualmente

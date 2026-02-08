@@ -49,7 +49,8 @@ export const appRouter = router({
         height: z.number().min(100).max(250),
         currentWeight: z.number().min(30).max(300),
         targetWeight: z.number().min(30).max(300),
-        activityType: z.enum(["sedentary", "football", "gym", "basketball", "dance", "running", "swimming", "cycling", "other"]),
+        activityTypes: z.array(z.string()).min(1),
+        activityFrequencies: z.record(z.string(), z.number().min(1).max(7)).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         // Calculate recommended daily calories based on Harris-Benedict equation
@@ -63,20 +64,19 @@ export const appRouter = router({
           bmr = 447.593 + (9.247 * input.currentWeight) + (3.098 * input.height) - (4.330 * age);
         }
 
-        // Activity multipliers
-        const activityMultipliers: Record<string, number> = {
-          sedentary: 1.2,
-          football: 1.725,
-          gym: 1.55,
-          basketball: 1.725,
-          dance: 1.55,
-          running: 1.725,
-          swimming: 1.725,
-          cycling: 1.55,
-          other: 1.375,
-        };
+        // Calculate weighted activity multiplier based on individual frequencies
+        const isSedentary = input.activityTypes.includes("sedentary");
+        let multiplier = 1.2;
+        if (!isSedentary && input.activityFrequencies) {
+          const totalDays = Object.values(input.activityFrequencies).reduce((a, b) => a + b, 0);
+          const cappedDays = Math.min(totalDays, 7);
+          if (cappedDays <= 1) multiplier = 1.2;
+          else if (cappedDays <= 3) multiplier = 1.375;
+          else if (cappedDays <= 5) multiplier = 1.55;
+          else multiplier = 1.725;
+        }
 
-        const tdee = Math.round(bmr * (activityMultipliers[input.activityType] || 1.375));
+        const tdee = Math.round(bmr * multiplier);
         
         // Adjust for weight goal
         let dailyCalorieGoal = tdee;
@@ -87,7 +87,8 @@ export const appRouter = router({
         }
 
         // Calculate macro goals (balanced approach)
-        const dailyProteinGoal = Math.round(input.currentWeight * 1.6); // 1.6g per kg for active people
+        const proteinMultiplier = isSedentary ? 1.2 : 1.6;
+        const dailyProteinGoal = Math.round(input.currentWeight * proteinMultiplier);
         const dailyFatGoal = Math.round((dailyCalorieGoal * 0.25) / 9); // 25% from fat
         const dailyCarbsGoal = Math.round((dailyCalorieGoal - (dailyProteinGoal * 4) - (dailyFatGoal * 9)) / 4);
 
@@ -99,7 +100,8 @@ export const appRouter = router({
           height: input.height,
           currentWeight: String(input.currentWeight),
           targetWeight: String(input.targetWeight),
-          activityType: input.activityType,
+          activityType: input.activityTypes.join(","),
+          activityFrequencies: input.activityFrequencies || {},
           dailyCalorieGoal,
           dailyProteinGoal,
           dailyCarbsGoal,
@@ -141,8 +143,9 @@ export const appRouter = router({
         height: z.number().min(100).max(250).optional(),
         currentWeight: z.number().min(30).max(300).optional(),
         targetWeight: z.number().min(30).max(300).optional(),
-        activityType: z.enum(["sedentary", "football", "gym", "basketball", "dance", "running", "swimming", "cycling", "other"]).optional(),
+        activityType: z.string().optional(),
         activityFrequency: z.number().min(0).max(7).optional(),
+        activityFrequencies: z.record(z.string(), z.number().min(1).max(7)).optional(),
         dailyCalorieGoal: z.number().min(500).max(10000).optional(),
         dailyProteinGoal: z.number().min(0).max(500).optional(),
         dailyCarbsGoal: z.number().min(0).max(1000).optional(),
@@ -156,6 +159,7 @@ export const appRouter = router({
         if (input.birthDate) updates.birthDate = new Date(input.birthDate);
         if (input.currentWeight) updates.currentWeight = String(input.currentWeight);
         if (input.targetWeight) updates.targetWeight = String(input.targetWeight);
+        if (input.activityFrequencies) updates.activityFrequencies = JSON.stringify(input.activityFrequencies);
         
         return updateUserProfile(ctx.user.id, updates);
       }),
@@ -180,13 +184,16 @@ export const appRouter = router({
         bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
       }
 
-      const freq = profile.activityFrequency || 3;
       const actType = profile.activityType || "sedentary";
+      const isSedentary = actType === "sedentary" || actType.includes("sedentary");
+      const freqs = (profile as any).activityFrequencies as Record<string, number> | null;
       let multiplier = 1.2;
-      if (actType !== "sedentary") {
-        if (freq <= 1) multiplier = 1.2;
-        else if (freq <= 3) multiplier = 1.375;
-        else if (freq <= 5) multiplier = 1.55;
+      if (!isSedentary) {
+        const totalDays = freqs ? Object.values(freqs).reduce((a, b) => a + b, 0) : (profile.activityFrequency || 3);
+        const cappedDays = Math.min(totalDays, 7);
+        if (cappedDays <= 1) multiplier = 1.2;
+        else if (cappedDays <= 3) multiplier = 1.375;
+        else if (cappedDays <= 5) multiplier = 1.55;
         else multiplier = 1.725;
       }
 
@@ -198,7 +205,7 @@ export const appRouter = router({
         dailyCalorieGoal = tdee + 300;
       }
 
-      const dailyProteinGoal = Math.round(weight * (actType !== "sedentary" ? 1.8 : 1.2));
+      const dailyProteinGoal = Math.round(weight * (!isSedentary ? 1.8 : 1.2));
       const dailyFatGoal = Math.round((dailyCalorieGoal * 0.25) / 9);
       const dailyCarbsGoal = Math.round((dailyCalorieGoal - (dailyProteinGoal * 4) - (dailyFatGoal * 9)) / 4);
 
