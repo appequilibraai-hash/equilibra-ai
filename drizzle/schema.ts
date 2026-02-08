@@ -44,9 +44,13 @@ export const userProfiles = mysqlTable("userProfiles", {
   dailyCarbsGoal: int("dailyCarbsGoal").default(250), // grams
   dailyFatGoal: int("dailyFatGoal").default(65), // grams
   
+  // Physical activity frequency
+  activityFrequency: int("activityFrequency").default(3), // days per week
+  
   // Preferences
   dietaryPreferences: json("dietaryPreferences").$type<string[]>(), // vegetarian, vegan, gluten-free, etc.
   allergies: json("allergies").$type<string[]>(),
+  blacklistedFoods: json("blacklistedFoods").$type<string[]>(), // foods to never suggest
   
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

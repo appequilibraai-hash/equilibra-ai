@@ -10,7 +10,6 @@ import AnalyzeMeal from "./pages/AnalyzeMeal";
 import About from "./pages/About";
 import Onboarding from "./pages/Onboarding";
 import ProfileProgress from "./pages/ProfileProgress";
-import ProfileData from "./pages/ProfileData";
 import ProfileRecommendations from "./pages/ProfileRecommendations";
 import ProfileSettings from "./pages/ProfileSettings";
 import MealDetail from "./pages/MealDetail";
@@ -37,7 +36,6 @@ function ProfileRoutes() {
       <Switch>
         <Route path="/profile" component={ProfileProgress} />
         <Route path="/profile/progress" component={ProfileProgress} />
-        <Route path="/profile/data" component={ProfileData} />
         <Route path="/profile/recommendations" component={ProfileRecommendations} />
         <Route path="/profile/settings" component={ProfileSettings} />
         <Route path="/profile/meal/:id" component={MealDetail} />

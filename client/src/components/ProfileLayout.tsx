@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useLocation, Redirect } from "wouter";
 import { motion } from "framer-motion";
-import { TrendingUp, Calendar, Lightbulb, Settings, ArrowLeft } from "lucide-react";
+import { TrendingUp, Lightbulb, Settings, ArrowLeft } from "lucide-react";
 
 const LOGO_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/ZMDCqRyCaIYlOHQd.png";
 
@@ -28,7 +28,6 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
 
   const tabs = [
     { id: "progress", label: "Progresso", icon: TrendingUp, path: "/profile/progress" },
-    { id: "data", label: "Dados", icon: Calendar, path: "/profile/data" },
     { id: "recommendations", label: "Recomendações", icon: Lightbulb, path: "/profile/recommendations" },
     { id: "settings", label: "Configurações", icon: Settings, path: "/profile/settings" },
   ];

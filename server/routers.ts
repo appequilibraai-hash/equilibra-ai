@@ -17,7 +17,9 @@ import {
   getTodayMeals,
   getDailyNutritionSummary,
   getWeeklyNutritionSummary,
+  getWeeklyNutritionSummaryForDate,
   deleteMeal,
+  getMealsByDate,
   getMealsByDateRange,
   addWeightRecord,
   getWeightHistory,
@@ -140,12 +142,14 @@ export const appRouter = router({
         currentWeight: z.number().min(30).max(300).optional(),
         targetWeight: z.number().min(30).max(300).optional(),
         activityType: z.enum(["sedentary", "football", "gym", "basketball", "dance", "running", "swimming", "cycling", "other"]).optional(),
+        activityFrequency: z.number().min(0).max(7).optional(),
         dailyCalorieGoal: z.number().min(500).max(10000).optional(),
         dailyProteinGoal: z.number().min(0).max(500).optional(),
         dailyCarbsGoal: z.number().min(0).max(1000).optional(),
         dailyFatGoal: z.number().min(0).max(500).optional(),
         dietaryPreferences: z.array(z.string()).optional(),
         allergies: z.array(z.string()).optional(),
+        blacklistedFoods: z.array(z.string()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const updates: Record<string, any> = { ...input };
@@ -155,6 +159,58 @@ export const appRouter = router({
         
         return updateUserProfile(ctx.user.id, updates);
       }),
+
+    // Recalculate goals automatically based on Harris-Benedict
+    recalculateGoals: protectedProcedure.mutation(async ({ ctx }) => {
+      const profile = await getUserProfile(ctx.user.id);
+      if (!profile || !profile.birthDate || !profile.sex || !profile.height || !profile.currentWeight || !profile.targetWeight) {
+        return null;
+      }
+
+      const birthDate = new Date(profile.birthDate);
+      const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      const weight = Number(profile.currentWeight);
+      const height = Number(profile.height);
+      const targetWeight = Number(profile.targetWeight);
+
+      let bmr: number;
+      if (profile.sex === "male") {
+        bmr = 88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age);
+      } else {
+        bmr = 447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age);
+      }
+
+      const freq = profile.activityFrequency || 3;
+      const actType = profile.activityType || "sedentary";
+      let multiplier = 1.2;
+      if (actType !== "sedentary") {
+        if (freq <= 1) multiplier = 1.2;
+        else if (freq <= 3) multiplier = 1.375;
+        else if (freq <= 5) multiplier = 1.55;
+        else multiplier = 1.725;
+      }
+
+      const tdee = Math.round(bmr * multiplier);
+      let dailyCalorieGoal = tdee;
+      if (targetWeight < weight) {
+        dailyCalorieGoal = Math.max(1200, tdee - 500);
+      } else if (targetWeight > weight) {
+        dailyCalorieGoal = tdee + 300;
+      }
+
+      const dailyProteinGoal = Math.round(weight * (actType !== "sedentary" ? 1.8 : 1.2));
+      const dailyFatGoal = Math.round((dailyCalorieGoal * 0.25) / 9);
+      const dailyCarbsGoal = Math.round((dailyCalorieGoal - (dailyProteinGoal * 4) - (dailyFatGoal * 9)) / 4);
+
+      await updateUserProfile(ctx.user.id, {
+        dailyCalorieGoal,
+        dailyProteinGoal,
+        dailyCarbsGoal,
+        dailyFatGoal,
+      });
+
+      return { dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal };
+    }),
   }),
 
   // ============ WEIGHT TRACKING ============
@@ -385,82 +441,164 @@ export const appRouter = router({
         };
       }),
 
-    weeklySummary: protectedProcedure.query(async ({ ctx }) => {
-      return getWeeklyNutritionSummary(ctx.user.id);
-    }),
+    weeklySummary: protectedProcedure
+      .input(z.object({ date: z.string().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        if (input?.date) {
+          return getWeeklyNutritionSummaryForDate(ctx.user.id, new Date(input.date));
+        }
+        return getWeeklyNutritionSummary(ctx.user.id);
+      }),
+
+    // Full daily extract with all micro and macronutrients
+    dailyFullExtract: protectedProcedure
+      .input(z.object({ date: z.string().optional() }))
+      .query(async ({ ctx, input }) => {
+        const date = input?.date ? new Date(input.date) : new Date();
+        const dayMeals = await getMealsByDate(ctx.user.id, date);
+        const summary = await getDailyNutritionSummary(ctx.user.id, date);
+        const profile = await getUserProfile(ctx.user.id);
+
+        // Aggregate all micronutrients from all meals
+        const microMap = new Map<string, { amount: number; unit: string; percentDailyValue: number }>();
+        for (const meal of dayMeals) {
+          const micros = (meal.micronutrients as any[]) || [];
+          for (const m of micros) {
+            const existing = microMap.get(m.name);
+            if (existing) {
+              existing.amount += m.amount;
+              existing.percentDailyValue += (m.percentDailyValue || 0);
+            } else {
+              microMap.set(m.name, { amount: m.amount, unit: m.unit, percentDailyValue: m.percentDailyValue || 0 });
+            }
+          }
+        }
+
+        const micronutrients = Array.from(microMap.entries()).map(([name, data]) => ({
+          name,
+          ...data,
+        }));
+
+        // Aggregate fiber, sugar, sodium
+        let totalFiber = 0, totalSugar = 0, totalSodium = 0;
+        for (const meal of dayMeals) {
+          totalFiber += Number(meal.totalFiber) || 0;
+          totalSugar += Number(meal.totalSugar) || 0;
+          totalSodium += Number(meal.totalSodium) || 0;
+        }
+
+        return {
+          date: date.toISOString().split('T')[0],
+          macros: {
+            calories: summary?.totalCalories || 0,
+            protein: summary?.totalProtein || 0,
+            carbs: summary?.totalCarbs || 0,
+            fat: summary?.totalFat || 0,
+            fiber: totalFiber,
+            sugar: totalSugar,
+            sodium: totalSodium,
+          },
+          micronutrients,
+          goals: {
+            calories: profile?.dailyCalorieGoal || 2000,
+            protein: profile?.dailyProteinGoal || 50,
+            carbs: profile?.dailyCarbsGoal || 250,
+            fat: profile?.dailyFatGoal || 65,
+          },
+          mealCount: dayMeals.length,
+          meals: dayMeals.map(m => ({
+            id: m.id,
+            mealType: m.mealType,
+            mealTime: m.mealTime,
+            totalCalories: m.totalCalories,
+            imageUrl: m.imageUrl,
+            detectedFoods: m.detectedFoods,
+          })),
+        };
+      }),
   }),
 
   // ============ RECOMMENDATIONS ============
   recommendations: router({
-    getNextMeal: protectedProcedure.query(async ({ ctx }) => {
-      const todayMeals = await getTodayMeals(ctx.user.id);
-      const profile = await getUserProfile(ctx.user.id);
-      const dailySummary = await getDailyNutritionSummary(ctx.user.id, new Date());
+    getNextMeal: protectedProcedure
+      .input(z.object({ date: z.string().optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        const date = input?.date ? new Date(input.date) : new Date();
+        const dayMeals = await getMealsByDate(ctx.user.id, date);
+        const profile = await getUserProfile(ctx.user.id);
+        const dailySummary = await getDailyNutritionSummary(ctx.user.id, date);
 
-      const goals = {
-        calories: profile?.dailyCalorieGoal || 2000,
-        protein: profile?.dailyProteinGoal || 50,
-        carbs: profile?.dailyCarbsGoal || 250,
-        fat: profile?.dailyFatGoal || 65,
-      };
+        const goals = {
+          calories: profile?.dailyCalorieGoal || 2000,
+          protein: profile?.dailyProteinGoal || 50,
+          carbs: profile?.dailyCarbsGoal || 250,
+          fat: profile?.dailyFatGoal || 65,
+        };
 
-      const consumed = {
-        calories: dailySummary?.totalCalories || 0,
-        protein: dailySummary?.totalProtein || 0,
-        carbs: dailySummary?.totalCarbs || 0,
-        fat: dailySummary?.totalFat || 0,
-      };
+        const consumed = {
+          calories: dailySummary?.totalCalories || 0,
+          protein: dailySummary?.totalProtein || 0,
+          carbs: dailySummary?.totalCarbs || 0,
+          fat: dailySummary?.totalFat || 0,
+        };
 
-      const remaining = {
-        calories: Math.max(0, goals.calories - consumed.calories),
-        protein: Math.max(0, goals.protein - consumed.protein),
-        carbs: Math.max(0, goals.carbs - consumed.carbs),
-        fat: Math.max(0, goals.fat - consumed.fat),
-      };
+        const remaining = {
+          calories: Math.max(0, goals.calories - consumed.calories),
+          protein: Math.max(0, goals.protein - consumed.protein),
+          carbs: Math.max(0, goals.carbs - consumed.carbs),
+          fat: Math.max(0, goals.fat - consumed.fat),
+        };
 
-      const hour = new Date().getHours();
-      let nextMealType: string;
-      if (hour < 10) nextMealType = "café da manhã";
-      else if (hour < 14) nextMealType = "almoço";
-      else if (hour < 18) nextMealType = "lanche da tarde";
-      else nextMealType = "jantar";
+        const hour = new Date().getHours();
+        let nextMealType: string;
+        if (hour < 10) nextMealType = "café da manhã";
+        else if (hour < 14) nextMealType = "almoço";
+        else if (hour < 18) nextMealType = "lanche da tarde";
+        else nextMealType = "jantar";
 
-      const recommendations = await getAIRecommendations(
-        remaining,
-        nextMealType,
-        profile?.dietaryPreferences || [],
-        profile?.allergies || [],
-        profile?.activityType || "other"
-      );
+        const blacklist = profile?.blacklistedFoods || [];
+        const recommendations = await getAIRecommendations(
+          remaining,
+          nextMealType,
+          profile?.dietaryPreferences || [],
+          [...(profile?.allergies || []), ...blacklist],
+          profile?.activityType || "other"
+        );
 
-      return {
-        nextMealType,
-        remaining,
-        goals,
-        consumed,
-        recommendations,
-        mealsToday: todayMeals.length,
-      };
-    }),
+        // Get micronutrient deficiencies for supplement suggestions
+        const microMap = new Map<string, { amount: number; unit: string; percentDailyValue: number }>();
+        for (const meal of dayMeals) {
+          const micros = (meal.micronutrients as any[]) || [];
+          for (const m of micros) {
+            const existing = microMap.get(m.name);
+            if (existing) {
+              existing.amount += m.amount;
+              existing.percentDailyValue += (m.percentDailyValue || 0);
+            } else {
+              microMap.set(m.name, { amount: m.amount, unit: m.unit, percentDailyValue: m.percentDailyValue || 0 });
+            }
+          }
+        }
+        const deficientMicros = Array.from(microMap.entries())
+          .filter(([_, data]) => data.percentDailyValue < 50)
+          .map(([name, data]) => ({ name, ...data }));
 
-    // Sports nutrition recommendations
-    getSportsNutrition: protectedProcedure.query(async ({ ctx }) => {
-      const profile = await getUserProfile(ctx.user.id);
-      const dailySummary = await getDailyNutritionSummary(ctx.user.id, new Date());
+        // Get supplement suggestions if there are deficiencies
+        let supplements: any[] = [];
+        if (deficientMicros.length > 0 && dayMeals.length > 0) {
+          supplements = await getSupplementSuggestions(deficientMicros, profile);
+        }
 
-      if (!profile) {
-        return { recommendations: [], supplements: [] };
-      }
-
-      const consumed = {
-        calories: dailySummary?.totalCalories || 0,
-        protein: dailySummary?.totalProtein || 0,
-        carbs: dailySummary?.totalCarbs || 0,
-        fat: dailySummary?.totalFat || 0,
-      };
-
-      return getSportsNutritionRecommendations(profile, consumed);
-    }),
+        return {
+          nextMealType,
+          remaining,
+          goals,
+          consumed,
+          recommendations,
+          supplements,
+          mealsToday: dayMeals.length,
+        };
+      }),
   }),
 });
 
@@ -716,6 +854,68 @@ Retorne um JSON com array de 3 recomendações:
     return JSON.parse(content) as MealRecommendation[];
   } catch (error) {
     console.error("Recommendations error:", error);
+    return [];
+  }
+}
+
+async function getSupplementSuggestions(
+  deficientMicros: { name: string; amount: number; unit: string; percentDailyValue: number }[],
+  profile: any
+): Promise<{ name: string; dosage: string; timing: string; benefit: string }[]> {
+  const systemPrompt = `Você é um nutricionista esportivo especializado em suplementação.
+Com base nos micronutrientes deficientes do usuário, sugira suplementos adequados em português brasileiro.`;
+
+  const userPrompt = `O usuário tem deficiência nos seguintes micronutrientes hoje:
+${deficientMicros.map(m => `- ${m.name}: ${m.amount}${m.unit} (${m.percentDailyValue}% do valor diário)`).join('\n')}
+
+Atividade física: ${profile?.activityType || 'não informado'}
+Peso: ${profile?.currentWeight || 'não informado'}kg
+
+Sugira suplementos para cobrir essas deficiências. Retorne JSON:
+[
+  {
+    "name": "Nome do suplemento",
+    "dosage": "Dosagem recomendada",
+    "timing": "Quando tomar",
+    "benefit": "Benefício principal"
+  }
+]`;
+
+  try {
+    const response = await invokeLLM({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "supplement_suggestions",
+          strict: true,
+          schema: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                dosage: { type: "string" },
+                timing: { type: "string" },
+                benefit: { type: "string" }
+              },
+              required: ["name", "dosage", "timing", "benefit"],
+              additionalProperties: false
+            }
+          }
+        }
+      }
+    });
+
+    const message = response.choices[0]?.message;
+    const content = typeof message?.content === 'string' ? message.content : '';
+    if (!content) return [];
+    return JSON.parse(content);
+  } catch (error) {
+    console.error("Supplement suggestions error:", error);
     return [];
   }
 }

@@ -309,6 +309,46 @@ export async function getWeeklyNutritionSummary(userId: number) {
   return (result as unknown as any[][])[0] || [];
 }
 
+export async function getMealsByDate(userId: number, date: Date): Promise<Meal[]> {
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setDate(endOfDay.getDate() + 1);
+  return getMealsByDateRange(userId, startOfDay, endOfDay);
+}
+
+export async function getWeeklyNutritionSummaryForDate(userId: number, referenceDate: Date) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const endDate = new Date(referenceDate);
+  endDate.setHours(23, 59, 59, 999);
+  const startDate = new Date(referenceDate);
+  startDate.setDate(startDate.getDate() - 6);
+  startDate.setHours(0, 0, 0, 0);
+
+  const result = await db.execute(sql`
+    SELECT 
+      DATE(mealTime) as date,
+      COALESCE(SUM(totalCalories), 0) as totalCalories,
+      COALESCE(SUM(totalProtein), 0) as totalProtein,
+      COALESCE(SUM(totalCarbs), 0) as totalCarbs,
+      COALESCE(SUM(totalFat), 0) as totalFat,
+      COALESCE(SUM(totalFiber), 0) as totalFiber,
+      COALESCE(SUM(totalSugar), 0) as totalSugar,
+      COALESCE(SUM(totalSodium), 0) as totalSodium,
+      COUNT(*) as mealCount
+    FROM meals
+    WHERE userId = ${userId}
+      AND mealTime >= ${startDate}
+      AND mealTime <= ${endDate}
+    GROUP BY DATE(mealTime)
+    ORDER BY DATE(mealTime)
+  `);
+
+  return (result as unknown as any[][])[0] || [];
+}
+
 export async function deleteMeal(mealId: number, userId: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;

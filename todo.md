@@ -94,3 +94,31 @@
 - [x] Remover botão desnecessário na página de recomendações
 - [x] Remover seção desnecessária na página de recomendações
 - [x] Garantir que todos os ingredientes sejam sempre listados nas recomendações
+
+## Refatoração Arquitetural v2
+
+### Navegação
+- [x] Remover aba "Dados" e fundir conteúdo na aba "Progresso"
+- [x] Menu com apenas 3 abas: Progresso, Recomendações, Configurações
+
+### Aba Progresso
+- [x] Seletor de data (calendário/DatePicker) rotulado "Hoje"
+- [x] Recarregar todos os dados ao mudar a data
+- [x] Filtro/dropdown "Visualizar Nutrientes" para selecionar cards visíveis
+- [x] Gráfico semanal com seletor de métrica no eixo Y
+- [x] Seção "Meus Dados" - Extrato Nutricional completo (micro e macro)
+- [x] Botão "Compartilhar Relatório" (texto formatado para WhatsApp/Email)
+
+### Aba Recomendações
+- [x] Ler estado atual da aba Progresso (dados do dia)
+- [x] Sugestão de próxima refeição baseada no saldo calórico restante
+- [x] Seção "Sugestão de Suplementação" para micronutrientes abaixo da meta
+
+### Aba Configurações
+- [x] Modo read-only por padrão com botão "Editar"
+- [x] Toast ao salvar e trancar campos novamente
+- [x] Sedentário oculta opções extras de frequência
+- [x] Input numérico "Frequência semanal (dias)" para atividades não-sedentárias
+- [x] Cálculo automático de metas (Harris-Benedict revisada)
+- [x] Metas calculadas trancadas com botão "Personalizar Metas"
+- [x] Blacklist de alimentos (restrições/alergias)
