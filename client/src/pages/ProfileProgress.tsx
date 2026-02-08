@@ -155,16 +155,10 @@ export default function ProfileProgress() {
             </PopoverContent>
           </Popover>
 
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowCardSelector(!showCardSelector)}>
-              <Pill className="h-4 w-4 mr-1" />
-              Nutrientes
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleShare}>
-              <Share2 className="h-4 w-4 mr-1" />
-              Compartilhar
-            </Button>
-          </div>
+          <Button variant="outline" size="sm" onClick={() => setShowCardSelector(!showCardSelector)}>
+            <Pill className="h-4 w-4 mr-1" />
+            Nutrientes
+          </Button>
         </div>
       </motion.div>
 
@@ -375,6 +369,31 @@ export default function ProfileProgress() {
               </CardTitle>
               {showExtract ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
             </button>
+            {showExtract && (
+              <div className="flex items-center justify-between flex-wrap gap-2 mt-3 pt-3 border-t">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <CalendarIcon className="h-4 w-4 text-emerald-500" />
+                      {isToday ? "Hoje" : format(selectedDate, "dd/MM/yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(d) => d && setSelectedDate(d)}
+                      locale={ptBR}
+                      disabled={(date) => date > new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Button variant="outline" size="sm" onClick={handleShare} className="gap-2">
+                  <Share2 className="h-4 w-4" />
+                  Compartilhar
+                </Button>
+              </div>
+            )}
           </CardHeader>
           <AnimatePresence>
             {showExtract && (

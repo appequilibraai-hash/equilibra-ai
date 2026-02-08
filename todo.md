@@ -126,3 +126,5 @@
 ## Correções de Layout
 
 - [x] Ingredientes não podem ultrapassar a borda - quebrar texto quando necessário
+- [x] Extrato nutricional deve permitir selecionar data e compartilhar para outros apps
+- [x] Remover botão desnecessário na aba Progresso (linha ~163)
