@@ -88,3 +88,9 @@
 
 - [x] Sedentário exclui todas as outras opções quando selecionado
 - [x] Permitir seleção de múltiplos esportes (exceto Sedentário)
+
+## Edições Página Recomendações
+
+- [x] Remover botão desnecessário na página de recomendações
+- [x] Remover seção desnecessária na página de recomendações
+- [x] Garantir que todos os ingredientes sejam sempre listados nas recomendações

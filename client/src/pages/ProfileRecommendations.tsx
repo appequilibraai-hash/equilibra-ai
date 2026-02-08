@@ -1,24 +1,18 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { 
   Lightbulb, 
   ChefHat, 
   Flame, 
-  Dumbbell,
-  Pill,
-  Clock,
-  Sparkles,
-  RefreshCw
+  Sparkles
 } from "lucide-react";
 
 export default function ProfileRecommendations() {
-  const { data: recommendations, isLoading, refetch, isFetching } = trpc.recommendations.getNextMeal.useQuery();
-  const { data: sportsNutrition, isLoading: loadingSports } = trpc.recommendations.getSportsNutrition.useQuery();
-
-  if (isLoading || loadingSports) {
+  const { data: recommendations, isLoading } = trpc.recommendations.getNextMeal.useQuery();
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent" />
@@ -75,15 +69,7 @@ export default function ProfileRecommendations() {
             <Lightbulb className="h-5 w-5 text-amber-500" />
             Sugestões de Refeição
           </h2>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+
         </div>
 
         {recommendations?.recommendations && recommendations.recommendations.length > 0 ? (
@@ -124,16 +110,11 @@ export default function ProfileRecommendations() {
                   <div className="mb-4">
                     <p className="text-xs font-medium text-gray-500 mb-2">Ingredientes:</p>
                     <div className="flex flex-wrap gap-1">
-                      {rec.ingredients.slice(0, 5).map((ing, j) => (
+                      {rec.ingredients.map((ing, j) => (
                         <Badge key={j} variant="secondary" className="text-xs">
                           {ing}
                         </Badge>
                       ))}
-                      {rec.ingredients.length > 5 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{rec.ingredients.length - 5}
-                        </Badge>
-                      )}
                     </div>
                   </div>
 
@@ -159,79 +140,7 @@ export default function ProfileRecommendations() {
         )}
       </motion.div>
 
-      {/* Sports Nutrition */}
-      {sportsNutrition && (sportsNutrition.recommendations?.length > 0 || sportsNutrition.supplements?.length > 0) && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Dumbbell className="h-5 w-5 text-blue-500" />
-            Nutrição Esportiva
-          </h2>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Recommendations */}
-            {sportsNutrition.recommendations?.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Recomendações</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {sportsNutrition.recommendations.map((rec: any, i: number) => (
-                    <div key={i} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          rec.priority === 'alta' 
-                            ? 'bg-red-100 text-red-700'
-                            : rec.priority === 'média'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {rec.priority}
-                        </span>
-                        <span className="font-medium text-sm">{rec.title}</span>
-                      </div>
-                      <p className="text-xs text-gray-600">{rec.description}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Supplements */}
-            {sportsNutrition.supplements?.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Pill className="h-5 w-5 text-purple-500" />
-                    Suplementação Sugerida
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {sportsNutrition.supplements.map((sup: any, i: number) => (
-                    <div key={i} className="p-3 bg-purple-50 rounded-lg">
-                      <p className="font-medium text-purple-900">{sup.name}</p>
-                      <div className="flex items-center gap-4 mt-1 text-xs text-purple-700">
-                        <span className="flex items-center gap-1">
-                          <Pill className="h-3 w-3" />
-                          {sup.dosage}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {sup.timing}
-                        </span>
-                      </div>
-                      <p className="text-xs text-purple-600 mt-2">{sup.benefit}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 }
