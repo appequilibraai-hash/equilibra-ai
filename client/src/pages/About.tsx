@@ -14,9 +14,9 @@ import {
   ChevronRight
 } from "lucide-react";
 
-const FEATURE_CAMERA = "https://manus-storage.oss-cn-beijing.aliyuncs.com/feature-camera.png";
-const FEATURE_NUTRITION = "https://manus-storage.oss-cn-beijing.aliyuncs.com/feature-nutrition.png";
-const FEATURE_RECOMMENDATION = "https://manus-storage.oss-cn-beijing.aliyuncs.com/feature-recommendation.png";
+const FEATURE_CAMERA = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/glBXsoBlqohYlKQc.png";
+const FEATURE_NUTRITION = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/PAWxBjxFqnIVTmfu.png";
+const FEATURE_RECOMMENDATION = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/ulduxfKzkyvCRZjC.png";
 
 export default function About() {
   const features = [

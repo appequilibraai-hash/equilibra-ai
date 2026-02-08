@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Upload, Loader2, Sparkles, Save, ChefHat, X } from "lucide-react";
 import { useLocation } from "wouter";
 
-const HERO_IMAGE = "https://manus-storage.oss-cn-beijing.aliyuncs.com/hero-illustration.png";
+const HERO_IMAGE = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/lfdGXyjcUQOKGWLA.png";
 
 interface AnalysisResult {
   imageUrl: string;
@@ -136,7 +136,7 @@ export default function AnalyzeMeal() {
       {/* Hero Section */}
       <section className="py-12 md:py-20">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="grid md:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
             {/* Left: Text + Upload */}
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -167,7 +167,7 @@ export default function AnalyzeMeal() {
 
                 {!selectedImage ? (
                   <motion.div
-                    className="border-2 border-dashed border-emerald-300 rounded-2xl p-8 text-center bg-white/50 hover:bg-emerald-50/50 transition-colors cursor-pointer"
+                    className="border-2 border-dashed border-emerald-300 rounded-2xl p-8 text-center bg-white/50 hover:bg-emerald-50/50 transition-colors cursor-pointer mx-auto max-w-md"
                     whileHover={{ scale: 1.01 }}
                     onClick={() => fileInputRef.current?.click()}
                   >

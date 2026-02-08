@@ -6,7 +6,7 @@ import { Link, useLocation, Redirect } from "wouter";
 import { motion } from "framer-motion";
 import { TrendingUp, Calendar, Lightbulb, Settings, ArrowLeft } from "lucide-react";
 
-const LOGO_URL = "https://manus-storage-test.oss-cn-beijing.aliyuncs.com/equilibra-ai-logo-new.png";
+const LOGO_URL = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/ZMDCqRyCaIYlOHQd.png";
 
 interface ProfileLayoutProps {
   children: React.ReactNode;

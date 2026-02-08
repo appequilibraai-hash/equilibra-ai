@@ -76,3 +76,10 @@
 - [x] Aba Dados: Calendário/Timeline com diário alimentar
 - [x] Aba Recomendações: Nutricionista IA esportivo com sugestões
 - [x] Aba Configurações: Edição de perfil, senha, metas, notificações
+
+## Edições Visuais (Feedback do Usuário)
+
+- [x] Adicionar logo correto na navegação (PublicLayout)
+- [x] Adicionar logo correto no footer (PublicLayout)
+- [x] Substituir imagem quebrada na AnalyzeMeal por ilustração de buffet self-service
+- [x] Centralizar a área de upload/captura de foto na AnalyzeMeal
