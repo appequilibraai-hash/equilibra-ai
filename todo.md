@@ -128,3 +128,6 @@
 - [x] Ingredientes não podem ultrapassar a borda - quebrar texto quando necessário
 - [x] Extrato nutricional deve permitir selecionar data e compartilhar para outros apps
 - [x] Remover botão desnecessário na aba Progresso (linha ~163)
+- [x] Remover botão desnecessário na linha ~222 do ProfileSettings
+- [x] Renomear blacklist para "Deseja evitar algum alimento?" com barra de adição e opção de remover
+- [x] Remover seção desnecessária na linha ~536 do ProfileSettings

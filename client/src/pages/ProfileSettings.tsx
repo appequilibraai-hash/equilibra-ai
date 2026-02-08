@@ -172,14 +172,18 @@ export default function ProfileSettings() {
       blacklistedFoods: [...prev.blacklistedFoods, item],
     }));
     setNewBlacklistItem("");
+    setEditMode(true);
   };
 
   const removeBlacklistItem = (item: string) => {
-    if (!editMode) return;
     setFormData(prev => ({
       ...prev,
       blacklistedFoods: prev.blacklistedFoods.filter(f => f !== item),
     }));
+    // Auto-save blacklist changes
+    setTimeout(() => {
+      setEditMode(true);
+    }, 0);
   };
 
   const togglePreference = (pref: string) => {
@@ -219,20 +223,9 @@ export default function ProfileSettings() {
             <Settings className="h-5 w-5 text-emerald-500" />
             Configurações
           </h2>
-          <Button
-            variant={editMode ? "default" : "outline"}
-            onClick={() => setEditMode(!editMode)}
-            className={editMode ? "bg-emerald-500 hover:bg-emerald-600" : ""}
-          >
-            <Pencil className="h-4 w-4 mr-2" />
-            {editMode ? "Editando..." : "Editar"}
-          </Button>
+
         </div>
-        {!editMode && (
-          <p className="text-sm text-gray-500 mt-1">
-            Clique em "Editar" para modificar suas configurações.
-          </p>
-        )}
+
       </motion.div>
 
       {/* User Info */}
@@ -481,120 +474,66 @@ export default function ProfileSettings() {
         </Card>
       </motion.div>
 
-      {/* Blacklist */}
+      {/* Alimentos a Evitar */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Ban className="h-5 w-5 text-red-500" />
-              Alimentos Proibidos (Blacklist)
+              Deseja evitar algum alimento?
             </CardTitle>
             <CardDescription>
-              Alimentos que nunca devem aparecer nas sugestões de refeição.
+              Adicione alimentos que serão excluídos das sugestões de refeição.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {editMode && (
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Ex: Fígado, Quiabo..."
-                  value={newBlacklistItem}
-                  onChange={(e) => setNewBlacklistItem(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addBlacklistItem()}
-                  className="flex-1"
-                />
-                <Button onClick={addBlacklistItem} className="bg-red-500 hover:bg-red-600">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Digite o nome do alimento..."
+                value={newBlacklistItem}
+                onChange={(e) => setNewBlacklistItem(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addBlacklistItem()}
+                className="flex-1"
+              />
+              <Button onClick={addBlacklistItem} className="bg-red-500 hover:bg-red-600">
+                <Plus className="h-4 w-4 mr-1" />
+                Adicionar
+              </Button>
+            </div>
             {formData.blacklistedFoods.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {formData.blacklistedFoods.map((food) => (
-                  <Badge
-                    key={food}
-                    variant="destructive"
-                    className="text-sm py-1 px-3 cursor-pointer"
-                    onClick={() => removeBlacklistItem(food)}
-                  >
-                    {food}
-                    {editMode && <X className="h-3 w-3 ml-1" />}
-                  </Badge>
-                ))}
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 font-medium">Alimentos na lista ({formData.blacklistedFoods.length}):</p>
+                <div className="flex flex-wrap gap-2">
+                  {formData.blacklistedFoods.map((food) => (
+                    <Badge
+                      key={food}
+                      variant="destructive"
+                      className="text-sm py-1.5 px-3 flex items-center gap-1.5 cursor-pointer hover:bg-red-600 transition-colors"
+                      onClick={() => removeBlacklistItem(food)}
+                    >
+                      {food}
+                      <X className="h-3.5 w-3.5 opacity-70 hover:opacity-100" />
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400">Clique no alimento para removê-lo da lista.</p>
               </div>
             ) : (
-              <p className="text-sm text-gray-400 text-center py-4">
-                Nenhum alimento na blacklist. {editMode ? "Adicione acima." : "Ative o modo edição para adicionar."}
-              </p>
+              <div className="text-center py-6 bg-gray-50 rounded-lg">
+                <Ban className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">
+                  Nenhum alimento na lista. Adicione acima os alimentos que deseja evitar.
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Dietary Preferences */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5 text-emerald-500" />
-              Preferências Alimentares
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="mb-2 block">Dietas</Label>
-              <div className="flex flex-wrap gap-2">
-                {dietaryOptions.map((pref) => (
-                  <Badge
-                    key={pref}
-                    variant={formData.dietaryPreferences.includes(pref) ? "default" : "outline"}
-                    className={`cursor-pointer transition-all ${
-                      formData.dietaryPreferences.includes(pref)
-                        ? "bg-emerald-500 hover:bg-emerald-600"
-                        : editMode ? "hover:bg-emerald-50" : "opacity-60"
-                    }`}
-                    onClick={() => togglePreference(pref)}
-                  >
-                    {pref}
-                    {formData.dietaryPreferences.includes(pref) && editMode && (
-                      <X className="h-3 w-3 ml-1" />
-                    )}
-                  </Badge>
-                ))}
-              </div>
-            </div>
 
-            <div>
-              <Label className="mb-2 block flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-red-500" />
-                Alergias / Restrições
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {allergyOptions.map((allergy) => (
-                  <Badge
-                    key={allergy}
-                    variant={formData.allergies.includes(allergy) ? "default" : "outline"}
-                    className={`cursor-pointer transition-all ${
-                      formData.allergies.includes(allergy)
-                        ? "bg-red-500 hover:bg-red-600"
-                        : editMode ? "hover:bg-red-50" : "opacity-60"
-                    }`}
-                    onClick={() => toggleAllergy(allergy)}
-                  >
-                    {allergy}
-                    {formData.allergies.includes(allergy) && editMode && (
-                      <X className="h-3 w-3 ml-1" />
-                    )}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
 
       {/* Save Button */}
-      {editMode && (
+      {(editMode || formData.blacklistedFoods.length > 0) && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
           <Button
             onClick={handleSave}
