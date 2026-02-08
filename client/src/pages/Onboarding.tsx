@@ -46,7 +46,7 @@ export default function Onboarding() {
     height: "",
     currentWeight: "",
     targetWeight: "",
-    activityType: "" as string,
+    activityTypes: [] as string[],
   });
 
   const completeMutation = trpc.onboarding.complete.useMutation();
@@ -74,7 +74,7 @@ export default function Onboarding() {
       case 3:
         return formData.height !== "" && formData.currentWeight !== "" && formData.targetWeight !== "";
       case 4:
-        return formData.activityType !== "";
+        return formData.activityTypes.length > 0;
       default:
         return false;
     }
@@ -89,7 +89,7 @@ export default function Onboarding() {
         height: Number(formData.height),
         currentWeight: Number(formData.currentWeight),
         targetWeight: Number(formData.targetWeight),
-        activityType: formData.activityType as any,
+        activityType: formData.activityTypes.join(",") as any,
       });
       toast.success("Perfil configurado com sucesso!");
       setLocation("/profile");
@@ -322,22 +322,57 @@ export default function Onboarding() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  <p className="text-sm text-gray-500 mb-3">
+                    Selecione "Sedentário" ou escolha um ou mais esportes.
+                  </p>
                   <div className="grid grid-cols-3 gap-3">
-                    {activityTypes.map((activity) => (
-                      <button
-                        key={activity.value}
-                        type="button"
-                        onClick={() => updateField("activityType", activity.value)}
-                        className={`p-4 rounded-xl border-2 transition-all text-center ${
-                          formData.activityType === activity.value
-                            ? "border-emerald-500 bg-emerald-50"
-                            : "border-gray-200 hover:border-emerald-300"
-                        }`}
-                      >
-                        <span className="text-3xl block mb-2">{activity.icon}</span>
-                        <span className="text-sm font-medium block">{activity.label}</span>
-                      </button>
-                    ))}
+                    {activityTypes.map((activity) => {
+                      const isSelected = formData.activityTypes.includes(activity.value);
+                      const isSedentarySelected = formData.activityTypes.includes("sedentary");
+                      const isDisabled = activity.value !== "sedentary" && isSedentarySelected;
+                      return (
+                        <button
+                          key={activity.value}
+                          type="button"
+                          disabled={isDisabled}
+                          onClick={() => {
+                            setFormData(prev => {
+                              if (activity.value === "sedentary") {
+                                return {
+                                  ...prev,
+                                  activityTypes: prev.activityTypes.includes("sedentary") ? [] : ["sedentary"],
+                                };
+                              }
+                              const withoutSedentary = prev.activityTypes.filter(t => t !== "sedentary");
+                              if (withoutSedentary.includes(activity.value)) {
+                                return {
+                                  ...prev,
+                                  activityTypes: withoutSedentary.filter(t => t !== activity.value),
+                                };
+                              } else {
+                                return {
+                                  ...prev,
+                                  activityTypes: [...withoutSedentary, activity.value],
+                                };
+                              }
+                            });
+                          }}
+                          className={`p-4 rounded-xl border-2 transition-all text-center ${
+                            isSelected
+                              ? "border-emerald-500 bg-emerald-50"
+                              : isDisabled
+                              ? "border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed"
+                              : "border-gray-200 hover:border-emerald-300"
+                          }`}
+                        >
+                          <span className="text-3xl block mb-2">{activity.icon}</span>
+                          <span className="text-sm font-medium block">{activity.label}</span>
+                          {isSelected && (
+                            <span className="block mt-1 text-emerald-500 text-xs">✓</span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </motion.div>

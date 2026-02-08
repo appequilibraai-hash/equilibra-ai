@@ -83,3 +83,8 @@
 - [x] Adicionar logo correto no footer (PublicLayout)
 - [x] Substituir imagem quebrada na AnalyzeMeal por ilustração de buffet self-service
 - [x] Centralizar a área de upload/captura de foto na AnalyzeMeal
+
+## Lógica de Seleção de Atividade
+
+- [x] Sedentário exclui todas as outras opções quando selecionado
+- [x] Permitir seleção de múltiplos esportes (exceto Sedentário)

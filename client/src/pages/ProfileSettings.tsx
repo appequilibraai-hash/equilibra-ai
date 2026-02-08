@@ -65,7 +65,7 @@ export default function ProfileSettings() {
     height: "",
     currentWeight: "",
     targetWeight: "",
-    activityType: "",
+    activityTypes: [] as string[],
     dailyCalorieGoal: "",
     dailyProteinGoal: "",
     dailyCarbsGoal: "",
@@ -82,7 +82,9 @@ export default function ProfileSettings() {
         height: (profile as any).height?.toString() || "",
         currentWeight: (profile as any).currentWeight?.toString() || "",
         targetWeight: (profile as any).targetWeight?.toString() || "",
-        activityType: (profile as any).activityType || "",
+        activityTypes: (profile as any).activityType
+          ? (profile as any).activityType.split(",").filter(Boolean)
+          : [],
         dailyCalorieGoal: profile.dailyCalorieGoal?.toString() || "",
         dailyProteinGoal: profile.dailyProteinGoal?.toString() || "",
         dailyCarbsGoal: profile.dailyCarbsGoal?.toString() || "",
@@ -93,13 +95,41 @@ export default function ProfileSettings() {
     }
   }, [profile]);
 
+  const toggleActivity = (value: string) => {
+    setFormData(prev => {
+      if (value === "sedentary") {
+        // Se selecionar Sedentário, limpa tudo e seleciona só Sedentário
+        // Se já está selecionado, desseleciona
+        return {
+          ...prev,
+          activityTypes: prev.activityTypes.includes("sedentary") ? [] : ["sedentary"],
+        };
+      }
+      // Se está selecionando um esporte, remove Sedentário se estiver selecionado
+      const withoutSedentary = prev.activityTypes.filter(t => t !== "sedentary");
+      if (withoutSedentary.includes(value)) {
+        // Desselecionar o esporte
+        return {
+          ...prev,
+          activityTypes: withoutSedentary.filter(t => t !== value),
+        };
+      } else {
+        // Adicionar o esporte
+        return {
+          ...prev,
+          activityTypes: [...withoutSedentary, value],
+        };
+      }
+    });
+  };
+
   const handleSave = async () => {
     try {
       await updateMutation.mutateAsync({
         height: formData.height ? Number(formData.height) : undefined,
         currentWeight: formData.currentWeight ? Number(formData.currentWeight) : undefined,
         targetWeight: formData.targetWeight ? Number(formData.targetWeight) : undefined,
-        activityType: formData.activityType as any || undefined,
+        activityType: formData.activityTypes.length > 0 ? formData.activityTypes.join(",") as any : undefined,
         dailyCalorieGoal: formData.dailyCalorieGoal ? Number(formData.dailyCalorieGoal) : undefined,
         dailyProteinGoal: formData.dailyProteinGoal ? Number(formData.dailyProteinGoal) : undefined,
         dailyCarbsGoal: formData.dailyCarbsGoal ? Number(formData.dailyCarbsGoal) : undefined,
@@ -277,22 +307,36 @@ export default function ProfileSettings() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <p className="text-sm text-gray-500 mb-3">
+              Selecione "Sedentário" ou escolha um ou mais esportes que pratica.
+            </p>
             <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-              {activityTypes.map((activity) => (
-                <button
-                  key={activity.value}
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, activityType: activity.value }))}
-                  className={`p-3 rounded-xl border-2 transition-all text-center ${
-                    formData.activityType === activity.value
-                      ? "border-emerald-500 bg-emerald-50"
-                      : "border-gray-200 hover:border-emerald-300"
-                  }`}
-                >
-                  <span className="text-2xl block mb-1">{activity.icon}</span>
-                  <span className="text-xs font-medium">{activity.label}</span>
-                </button>
-              ))}
+              {activityTypes.map((activity) => {
+                const isSelected = formData.activityTypes.includes(activity.value);
+                const isSedentarySelected = formData.activityTypes.includes("sedentary");
+                const isDisabled = activity.value !== "sedentary" && isSedentarySelected;
+                return (
+                  <button
+                    key={activity.value}
+                    type="button"
+                    onClick={() => toggleActivity(activity.value)}
+                    disabled={isDisabled}
+                    className={`p-3 rounded-xl border-2 transition-all text-center ${
+                      isSelected
+                        ? "border-emerald-500 bg-emerald-50"
+                        : isDisabled
+                        ? "border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed"
+                        : "border-gray-200 hover:border-emerald-300"
+                    }`}
+                  >
+                    <span className="text-2xl block mb-1">{activity.icon}</span>
+                    <span className="text-xs font-medium">{activity.label}</span>
+                    {isSelected && (
+                      <span className="block mt-1 text-emerald-500 text-xs">✓</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
