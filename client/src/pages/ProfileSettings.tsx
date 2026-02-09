@@ -499,7 +499,7 @@ export default function ProfileSettings() {
               </div>
             </div>
             <CardDescription>
-              Altere as calorias para recalcular macros (30% proteína, 40% carbs, 30% gordura). Altere um macro para ajustar os outros proporcionalmente.
+              Defina sua meta calórica para uma distribuição automática ou ajuste os macronutrientes individualmente conforme sua necessidade.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

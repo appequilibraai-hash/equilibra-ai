@@ -167,3 +167,4 @@
 - [x] Lógica matemática continua funcionando apenas em modo de edição
 - [x] Testar proteção contra edições acidentais
 - [x] Remover botão "Salvar Configurações" do final da página
+- [x] Atualizar descrição da seção "Metas Nutricionais Diárias" para ser mais clara e intuitiva
