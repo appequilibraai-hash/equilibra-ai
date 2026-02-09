@@ -33,7 +33,6 @@ export default function ProfileSettings() {
   const recalcMutation = trpc.profile.recalculateGoals.useMutation();
   const addWeightMutation = trpc.weight.add.useMutation();
 
-  const [editMode, setEditMode] = useState(false);
   const [newBlacklistItem, setNewBlacklistItem] = useState("");
   const [macroWarning, setMacroWarning] = useState("");
 
@@ -59,7 +58,6 @@ export default function ProfileSettings() {
         ? (profile as any).activityType.split(",").filter(Boolean)
         : [];
       const freqs = (profile as any).activityFrequencies || {};
-      // Ensure all non-sedentary activities have a frequency
       const normalizedFreqs: Record<string, number> = {};
       types.forEach((t: string) => {
         if (t !== "sedentary") {
@@ -82,8 +80,8 @@ export default function ProfileSettings() {
     }
   }, [profile]);
 
-  // Auto-calculate the 4th macro when 3 are set
-  const recalcFourthMacro = useCallback((data: typeof formData, editedField: string) => {
+  // Advanced macro reactivity: 2 scenarios
+  const recalcMacros = useCallback((data: typeof formData, editedField: string) => {
     const cal = Number(data.dailyCalorieGoal);
     const prot = Number(data.dailyProteinGoal);
     const carbs = Number(data.dailyCarbsGoal);
@@ -94,98 +92,82 @@ export default function ProfileSettings() {
       return data;
     }
 
-    // Count how many macros have values
-    const hasProt = data.dailyProteinGoal !== "" && prot > 0;
-    const hasCarbs = data.dailyCarbsGoal !== "" && carbs > 0;
-    const hasFat = data.dailyFatGoal !== "" && fat > 0;
-    const filledCount = [hasProt, hasCarbs, hasFat].filter(Boolean).length;
+    const updated = { ...data };
 
-    if (filledCount < 3) {
+    // SCENARIO A: User changed Calories - recalculate all macros with default distribution
+    if (editedField === "dailyCalorieGoal") {
+      const proteinCals = cal * 0.30;
+      const carbsCals = cal * 0.40;
+      const fatCals = cal * 0.30;
+
+      updated.dailyProteinGoal = Math.round(proteinCals / 4).toString();
+      updated.dailyCarbsGoal = Math.round(carbsCals / 4).toString();
+      updated.dailyFatGoal = Math.round(fatCals / 9).toString();
       setMacroWarning("");
-      return data;
-    }
-
-    // All 3 macros are filled - calculate what the 4th should be
-    // Protein: 4 kcal/g, Carbs: 4 kcal/g, Fat: 9 kcal/g
-    const totalFromMacros = (prot * 4) + (carbs * 4) + (fat * 9);
-    const diff = Math.abs(totalFromMacros - cal);
-
-    if (diff > 50) {
-      // Adjust the last edited macro to fit
-      const updated = { ...data };
-      const remaining = cal - (editedField !== "dailyProteinGoal" ? prot * 4 : 0)
-                           - (editedField !== "dailyCarbsGoal" ? carbs * 4 : 0)
-                           - (editedField !== "dailyFatGoal" ? fat * 9 : 0);
-
-      if (editedField === "dailyCalorieGoal") {
-        // Recalculate carbs (most flexible)
-        const newCarbs = Math.max(0, Math.round((cal - (prot * 4) - (fat * 9)) / 4));
-        updated.dailyCarbsGoal = newCarbs.toString();
-        if (newCarbs < 0) {
-          setMacroWarning("Impossível atingir essa meta calórica com os macros atuais. Ajustado ao mais próximo possível.");
-          updated.dailyCarbsGoal = "0";
-          // Recalculate calories to match
-          const realCal = (prot * 4) + (fat * 9);
-          updated.dailyCalorieGoal = realCal.toString();
-        } else {
-          setMacroWarning("");
-        }
-      } else if (editedField === "dailyProteinGoal") {
-        const newVal = Math.max(0, Math.round(remaining / 4));
-        if (remaining < 0) {
-          setMacroWarning("O valor de proteína é muito alto para a meta calórica. Ajustado ao mais próximo possível.");
-          const maxProt = Math.max(0, Math.round((cal - (carbs * 4) - (fat * 9)) / 4));
-          updated.dailyProteinGoal = maxProt.toString();
-        } else {
-          setMacroWarning("");
-        }
-        // Recalculate carbs
-        const adjustedProt = Number(updated.dailyProteinGoal);
-        const newCarbs = Math.max(0, Math.round((cal - (adjustedProt * 4) - (fat * 9)) / 4));
-        updated.dailyCarbsGoal = newCarbs.toString();
-      } else if (editedField === "dailyCarbsGoal") {
-        // Recalculate fat
-        const newFat = Math.max(0, Math.round((cal - (prot * 4) - (carbs * 4)) / 9));
-        if (newFat < 0) {
-          setMacroWarning("O valor de carboidratos é muito alto para a meta calórica. Ajustado ao mais próximo possível.");
-          const maxCarbs = Math.max(0, Math.round((cal - (prot * 4) - (fat * 9)) / 4));
-          updated.dailyCarbsGoal = maxCarbs.toString();
-        } else {
-          updated.dailyFatGoal = newFat.toString();
-          setMacroWarning("");
-        }
-      } else if (editedField === "dailyFatGoal") {
-        // Recalculate carbs
-        const newCarbs = Math.max(0, Math.round((cal - (prot * 4) - (fat * 9)) / 4));
-        if (newCarbs < 0) {
-          setMacroWarning("O valor de gordura é muito alto para a meta calórica. Ajustado ao mais próximo possível.");
-          const maxFat = Math.max(0, Math.round((cal - (prot * 4) - (carbs * 4)) / 9));
-          updated.dailyFatGoal = maxFat.toString();
-        } else {
-          updated.dailyCarbsGoal = newCarbs.toString();
-          setMacroWarning("");
-        }
-      }
-
       return updated;
     }
 
-    setMacroWarning("");
-    return data;
+    // SCENARIO B: User changed a specific macro - keep calories fixed, recalculate others
+    const totalFromMacros = (prot * 4) + (carbs * 4) + (fat * 9);
+    const diff = totalFromMacros - cal;
+
+    if (Math.abs(diff) > 5) {
+      if (editedField === "dailyProteinGoal") {
+        const remainingCals = cal - (prot * 4);
+        if (remainingCals < 0) {
+          setMacroWarning("⚠️ Proteína muito alta! Reduzindo para caber na meta calórica.");
+          const maxProt = Math.max(0, Math.round((cal * 0.50) / 4));
+          updated.dailyProteinGoal = maxProt.toString();
+          const newRemaining = cal - (maxProt * 4);
+          updated.dailyCarbsGoal = Math.round((newRemaining * 0.57) / 4).toString();
+          updated.dailyFatGoal = Math.round((newRemaining * 0.43) / 9).toString();
+        } else {
+          updated.dailyCarbsGoal = Math.round((remainingCals * 0.57) / 4).toString();
+          updated.dailyFatGoal = Math.round((remainingCals * 0.43) / 9).toString();
+          setMacroWarning("");
+        }
+      } else if (editedField === "dailyCarbsGoal") {
+        const remainingCals = cal - (carbs * 4);
+        if (remainingCals < 0) {
+          setMacroWarning("⚠️ Carboidratos muito altos! Reduzindo para caber na meta calórica.");
+          const maxCarbs = Math.max(0, Math.round((cal * 0.50) / 4));
+          updated.dailyCarbsGoal = maxCarbs.toString();
+          const newRemaining = cal - (maxCarbs * 4);
+          updated.dailyProteinGoal = Math.round((newRemaining * 0.50) / 4).toString();
+          updated.dailyFatGoal = Math.round((newRemaining * 0.50) / 9).toString();
+        } else {
+          updated.dailyProteinGoal = Math.round((remainingCals * 0.50) / 4).toString();
+          updated.dailyFatGoal = Math.round((remainingCals * 0.50) / 9).toString();
+          setMacroWarning("");
+        }
+      } else if (editedField === "dailyFatGoal") {
+        const remainingCals = cal - (fat * 9);
+        if (remainingCals < 0) {
+          setMacroWarning("⚠️ Gordura muito alta! Reduzindo para caber na meta calórica.");
+          const maxFat = Math.max(0, Math.round((cal * 0.30) / 9));
+          updated.dailyFatGoal = maxFat.toString();
+          const newRemaining = cal - (maxFat * 9);
+          updated.dailyProteinGoal = Math.round((newRemaining * 0.30) / 4).toString();
+          updated.dailyCarbsGoal = Math.round((newRemaining * 0.70) / 4).toString();
+        } else {
+          updated.dailyProteinGoal = Math.round((remainingCals * 0.30) / 4).toString();
+          updated.dailyCarbsGoal = Math.round((remainingCals * 0.70) / 4).toString();
+          setMacroWarning("");
+        }
+      }
+    } else {
+      setMacroWarning("");
+    }
+
+    return updated;
   }, []);
 
   const handleMacroChange = (field: string, value: string) => {
     setLastEditedMacro(field);
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
-      // Debounce recalculation
-      return updated;
+      return recalcMacros(updated, field);
     });
-  };
-
-  // Recalculate on blur (when user finishes editing a macro field)
-  const handleMacroBlur = (field: string) => {
-    setFormData(prev => recalcFourthMacro(prev, field));
   };
 
   const toggleActivity = (value: string) => {
@@ -198,21 +180,32 @@ export default function ProfileSettings() {
         };
       }
       const withoutSedentary = prev.activityTypes.filter(t => t !== "sedentary");
+      const newTypes = withoutSedentary.includes(value)
+        ? withoutSedentary.filter(t => t !== value)
+        : [...withoutSedentary, value];
+
       const newFreqs = { ...prev.activityFrequencies };
-      if (withoutSedentary.includes(value)) {
+      if (!newTypes.includes(value)) {
         delete newFreqs[value];
-        return { ...prev, activityTypes: withoutSedentary.filter(t => t !== value), activityFrequencies: newFreqs };
-      } else {
-        newFreqs[value] = 3; // default 3 days/week
-        return { ...prev, activityTypes: [...withoutSedentary, value], activityFrequencies: newFreqs };
+      } else if (!newFreqs[value]) {
+        newFreqs[value] = 3;
       }
+
+      return {
+        ...prev,
+        activityTypes: newTypes,
+        activityFrequencies: newFreqs,
+      };
     });
   };
 
-  const setActivityFrequency = (activity: string, freq: number) => {
+  const updateActivityFrequency = (activity: string, frequency: number) => {
     setFormData(prev => ({
       ...prev,
-      activityFrequencies: { ...prev.activityFrequencies, [activity]: freq },
+      activityFrequencies: {
+        ...prev.activityFrequencies,
+        [activity]: frequency,
+      },
     }));
   };
 
@@ -245,7 +238,7 @@ export default function ProfileSettings() {
         currentWeight: formData.currentWeight ? Number(formData.currentWeight) : undefined,
         targetWeight: formData.targetWeight ? Number(formData.targetWeight) : undefined,
         activityType: formData.activityTypes.length > 0 ? formData.activityTypes.join(",") as any : undefined,
-        activityFrequency: undefined, // deprecated, using activityFrequencies now
+        activityFrequency: undefined,
         dailyCalorieGoal: formData.dailyCalorieGoal ? Number(formData.dailyCalorieGoal) : undefined,
         dailyProteinGoal: formData.dailyProteinGoal ? Number(formData.dailyProteinGoal) : undefined,
         dailyCarbsGoal: formData.dailyCarbsGoal ? Number(formData.dailyCarbsGoal) : undefined,
@@ -253,14 +246,12 @@ export default function ProfileSettings() {
         blacklistedFoods: formData.blacklistedFoods,
       });
       toast.success("Configurações salvas com sucesso!");
-      setEditMode(false);
       refetch();
     } catch {
       toast.error("Erro ao salvar configurações");
     }
   };
 
-  // Auto-save blacklist immediately
   const saveBlacklist = async (foods: string[]) => {
     try {
       await updateMutation.mutateAsync({
@@ -317,12 +308,10 @@ export default function ProfileSettings() {
   const isSedentary = formData.activityTypes.includes("sedentary");
   const selectedActivities = formData.activityTypes.filter(t => t !== "sedentary");
 
-  // Calculate macro total for display
   const macroCalories = (Number(formData.dailyProteinGoal) * 4) + (Number(formData.dailyCarbsGoal) * 4) + (Number(formData.dailyFatGoal) * 9);
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
           <Settings className="h-5 w-5 text-emerald-500" />
@@ -342,31 +331,7 @@ export default function ProfileSettings() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Nome</Label>
-                <Input value={user?.name || ""} disabled className="mt-1 bg-gray-50" />
-              </div>
-              <div>
-                <Label>Email</Label>
-                <Input value={user?.email || ""} disabled className="mt-1 bg-gray-50" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Body Metrics */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Scale className="h-5 w-5 text-emerald-500" />
-              Medidas Corporais
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="height">Altura (cm)</Label>
+                <Label htmlFor="height" className="text-xs">Altura (cm)</Label>
                 <Input
                   id="height"
                   type="number"
@@ -376,125 +341,107 @@ export default function ProfileSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="currentWeight">Peso Atual (kg)</Label>
+                <Label htmlFor="currentWeight" className="text-xs">Peso Atual (kg)</Label>
                 <Input
                   id="currentWeight"
                   type="number"
-                  step="0.1"
                   value={formData.currentWeight}
                   onChange={(e) => setFormData(prev => ({ ...prev, currentWeight: e.target.value }))}
                   className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="targetWeight">Peso Meta (kg)</Label>
+                <Label htmlFor="targetWeight" className="text-xs">Peso Desejado (kg)</Label>
                 <Input
                   id="targetWeight"
                   type="number"
-                  step="0.1"
                   value={formData.targetWeight}
                   onChange={(e) => setFormData(prev => ({ ...prev, targetWeight: e.target.value }))}
                   className="mt-1"
                 />
               </div>
-            </div>
-
-            {/* Quick Weight Update - always available */}
-            <div className="p-4 bg-emerald-50 rounded-lg">
-              <Label className="text-emerald-700">Registrar Novo Peso</Label>
-              <div className="flex gap-2 mt-2">
-                <Input
-                  type="number"
-                  step="0.1"
-                  placeholder="Ex: 72.5"
-                  value={newWeight}
-                  onChange={(e) => setNewWeight(e.target.value)}
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleAddWeight}
-                  disabled={!newWeight || addWeightMutation.isPending}
-                  className="bg-emerald-500 hover:bg-emerald-600"
-                >
-                  {addWeightMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4" />
-                  )}
-                </Button>
+              <div>
+                <Label htmlFor="newWeight" className="text-xs">Registrar Peso</Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="newWeight"
+                    type="number"
+                    placeholder="kg"
+                    value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleAddWeight}
+                    disabled={addWeightMutation.isPending}
+                    className="bg-emerald-500 hover:bg-emerald-600"
+                  >
+                    {addWeightMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Activity Type + Individual Frequency */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+      {/* Physical Activities */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Dumbbell className="h-5 w-5 text-emerald-500" />
-              Atividade Física
+              Atividades Físicas
             </CardTitle>
+            <CardDescription>Selecione suas atividades. Sedentário exclui outras opções.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-500">
-              Selecione "Sedentário" ou escolha um ou mais esportes que pratica.
-            </p>
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
-              {activityTypes.map((activity) => {
-                const isSelected = formData.activityTypes.includes(activity.value);
-                const isSedentarySelected = formData.activityTypes.includes("sedentary");
-                const isDisabled = !editMode || (activity.value !== "sedentary" && isSedentarySelected);
-                return (
-                  <button
-                    key={activity.value}
-                    type="button"
-                    onClick={() => toggleActivity(activity.value)}
-                    disabled={isDisabled}
-                    className={`p-3 rounded-xl border-2 transition-all text-center ${
-                      isSelected
-                        ? "border-emerald-500 bg-emerald-50"
-                        : isDisabled
-                        ? "border-gray-100 bg-gray-50 opacity-40 cursor-not-allowed"
-                        : "border-gray-200 hover:border-emerald-300"
-                    }`}
-                  >
-                    <span className="text-2xl block mb-1">{activity.icon}</span>
-                    <span className="text-xs font-medium">{activity.label}</span>
-                    {isSelected && <span className="block mt-1 text-emerald-500 text-xs">✓</span>}
-                  </button>
-                );
-              })}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {activityTypes.map(activity => (
+                <motion.button
+                  key={activity.value}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => toggleActivity(activity.value)}
+                  disabled={activity.value !== "sedentary" && isSedentary}
+                  className={`p-3 rounded-lg border-2 transition-all ${
+                    formData.activityTypes.includes(activity.value)
+                      ? "border-emerald-500 bg-emerald-50"
+                      : activity.value !== "sedentary" && isSedentary
+                      ? "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
+                      : "border-gray-200 hover:border-emerald-300"
+                  }`}
+                >
+                  <div className="text-2xl mb-1">{activity.icon}</div>
+                  <div className="text-xs font-semibold text-gray-700">{activity.label}</div>
+                  {formData.activityTypes.includes(activity.value) && (
+                    <div className="text-emerald-600 text-lg">✓</div>
+                  )}
+                </motion.button>
+              ))}
             </div>
 
-            {/* Individual Frequency per Activity */}
-            {!isSedentary && selectedActivities.length > 0 && (
-              <div className="space-y-3 p-4 bg-blue-50 rounded-lg">
-                <Label className="text-blue-700 font-semibold">Frequência semanal por atividade</Label>
-                <p className="text-xs text-blue-500">Defina quantos dias por semana pratica cada atividade.</p>
-                {selectedActivities.map((actValue) => {
-                  const act = activityTypes.find(a => a.value === actValue);
-                  if (!act) return null;
+            {selectedActivities.length > 0 && (
+              <div className="space-y-3 mt-4 pt-4 border-t">
+                <p className="text-sm font-semibold text-gray-700">Frequência Semanal por Atividade</p>
+                {selectedActivities.map(activity => {
+                  const actLabel = activityTypes.find(a => a.value === activity)?.label || activity;
                   return (
-                    <div key={actValue} className="flex items-center gap-3 bg-white p-3 rounded-lg">
-                      <span className="text-lg">{act.icon}</span>
-                      <span className="text-sm font-medium flex-1">{act.label}</span>
+                    <div key={activity} className="flex items-center gap-3">
+                      <Label className="text-xs w-24">{actLabel}</Label>
                       <Select
-                        value={(formData.activityFrequencies[actValue] || 3).toString()}
-                        onValueChange={(v) => setActivityFrequency(actValue, Number(v))}
+                        value={(formData.activityFrequencies[activity] || 3).toString()}
+                        onValueChange={(val) => updateActivityFrequency(activity, Number(val))}
                       >
-                        <SelectTrigger className="w-32">
+                        <SelectTrigger className="w-20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {[1, 2, 3, 4, 5, 6, 7].map(n => (
-                            <SelectItem key={n} value={n.toString()}>
-                              {n}x / semana
-                            </SelectItem>
+                          {[1, 2, 3, 4, 5, 6, 7].map(day => (
+                            <SelectItem key={day} value={day.toString()}>{day}x</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <span className="text-xs text-gray-500">dias/semana</span>
                     </div>
                   );
                 })}
@@ -504,7 +451,7 @@ export default function ProfileSettings() {
         </Card>
       </motion.div>
 
-      {/* Nutrition Goals with Interlinked Macros */}
+      {/* Nutrition Goals */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card>
           <CardHeader>
@@ -529,7 +476,7 @@ export default function ProfileSettings() {
               </Button>
             </div>
             <CardDescription>
-              Defina manualmente ou clique em "Calcular" para usar a fórmula Harris-Benedict. Ao alterar 3 macronutrientes, o 4o é ajustado automaticamente.
+              Altere as calorias para recalcular macros (30% proteína, 40% carbs, 30% gordura). Altere um macro para ajustar os outros proporcionalmente.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -541,7 +488,6 @@ export default function ProfileSettings() {
                   type="number"
                   value={formData.dailyCalorieGoal}
                   onChange={(e) => handleMacroChange("dailyCalorieGoal", e.target.value)}
-                  onBlur={() => handleMacroBlur("dailyCalorieGoal")}
                   className="mt-1 border-amber-300 focus:ring-amber-500"
                 />
               </div>
@@ -552,7 +498,6 @@ export default function ProfileSettings() {
                   type="number"
                   value={formData.dailyProteinGoal}
                   onChange={(e) => handleMacroChange("dailyProteinGoal", e.target.value)}
-                  onBlur={() => handleMacroBlur("dailyProteinGoal")}
                   className="mt-1 border-blue-300 focus:ring-blue-500"
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyProteinGoal) * 4} kcal</span>
@@ -564,7 +509,6 @@ export default function ProfileSettings() {
                   type="number"
                   value={formData.dailyCarbsGoal}
                   onChange={(e) => handleMacroChange("dailyCarbsGoal", e.target.value)}
-                  onBlur={() => handleMacroBlur("dailyCarbsGoal")}
                   className="mt-1 border-green-300 focus:ring-green-500"
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyCarbsGoal) * 4} kcal</span>
@@ -576,44 +520,41 @@ export default function ProfileSettings() {
                   type="number"
                   value={formData.dailyFatGoal}
                   onChange={(e) => handleMacroChange("dailyFatGoal", e.target.value)}
-                  onBlur={() => handleMacroBlur("dailyFatGoal")}
                   className="mt-1 border-orange-300 focus:ring-orange-500"
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyFatGoal) * 9} kcal</span>
               </div>
             </div>
 
-            {/* Macro balance indicator */}
+            {/* Macro balance indicator with real-time feedback */}
             {formData.dailyCalorieGoal && (
-              <div className={`p-3 rounded-lg text-sm ${
-                Math.abs(macroCalories - Number(formData.dailyCalorieGoal)) <= 50
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-amber-50 text-amber-700"
+              <div className={`p-3 rounded-lg text-sm transition-colors ${
+                Math.abs(macroCalories - Number(formData.dailyCalorieGoal)) <= 20
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : Math.abs(macroCalories - Number(formData.dailyCalorieGoal)) <= 50
+                  ? "bg-amber-50 text-amber-700 border border-amber-200"
+                  : "bg-red-50 text-red-700 border border-red-200"
               }`}>
                 <div className="flex items-center justify-between">
                   <span>Total dos macros: <strong>{macroCalories} kcal</strong></span>
                   <span>Meta: <strong>{formData.dailyCalorieGoal} kcal</strong></span>
                 </div>
                 {Math.abs(macroCalories - Number(formData.dailyCalorieGoal)) > 50 && (
-                  <p className="text-xs mt-1 opacity-75">
-                    Diferença de {Math.abs(macroCalories - Number(formData.dailyCalorieGoal))} kcal. Ajuste os macros ou recalcule.
+                  <p className="text-xs mt-2 font-semibold">
+                    ⚠️ Diferença de {Math.abs(macroCalories - Number(formData.dailyCalorieGoal))} kcal
                   </p>
                 )}
-              </div>
-            )}
-
-            {macroWarning && (
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                <p className="text-xs text-amber-700">{macroWarning}</p>
+                {macroWarning && (
+                  <p className="text-xs mt-2 font-semibold">{macroWarning}</p>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Alimentos a Evitar - Always editable, auto-saves */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+      {/* Blacklist Foods */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -621,75 +562,67 @@ export default function ProfileSettings() {
               Deseja evitar algum alimento?
             </CardTitle>
             <CardDescription>
-              Alimentos adicionados aqui ficam guardados permanentemente até que você os remova manualmente.
+              Alimentos adicionados aqui ficam guardados permanentemente e serão banidos das recomendações da IA.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Digite o nome do alimento..."
+                placeholder="Digite um alimento..."
                 value={newBlacklistItem}
                 onChange={(e) => setNewBlacklistItem(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && addBlacklistItem()}
-                className="flex-1"
+                onKeyPress={(e) => e.key === "Enter" && addBlacklistItem()}
               />
-              <Button onClick={addBlacklistItem} className="bg-red-500 hover:bg-red-600">
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar
+              <Button
+                onClick={addBlacklistItem}
+                className="bg-emerald-500 hover:bg-emerald-600"
+              >
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
-            {formData.blacklistedFoods.length > 0 ? (
+
+            {formData.blacklistedFoods.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-gray-500 font-medium">Alimentos na lista ({formData.blacklistedFoods.length}):</p>
+                <p className="text-xs font-semibold text-gray-600">Alimentos na lista:</p>
                 <div className="flex flex-wrap gap-2">
-                  {formData.blacklistedFoods.map((food) => (
+                  {formData.blacklistedFoods.map(food => (
                     <Badge
                       key={food}
-                      variant="destructive"
-                      className="text-sm py-1.5 px-3 flex items-center gap-1.5 cursor-pointer hover:bg-red-600 transition-colors"
+                      variant="secondary"
+                      className="flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer"
                       onClick={() => removeBlacklistItem(food)}
                     >
                       {food}
-                      <X className="h-3.5 w-3.5 opacity-70 hover:opacity-100" />
+                      <X className="h-3 w-3" />
                     </Badge>
                   ))}
                 </div>
-                <p className="text-xs text-gray-400">Clique no alimento para removê-lo da lista.</p>
-              </div>
-            ) : (
-              <div className="text-center py-6 bg-gray-50 rounded-lg">
-                <Ban className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">
-                  Nenhum alimento na lista. Adicione acima os alimentos que deseja evitar.
-                </p>
               </div>
             )}
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Save Button - only for profile edits, not blacklist */}
-      {editMode && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-          <Button
-            onClick={handleSave}
-            disabled={updateMutation.isPending}
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 py-6 text-lg"
-          >
-            {updateMutation.isPending ? (
-              <>
-                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="h-5 w-5 mr-2" />
-                Salvar Configurações
-              </>
-            )}
-          </Button>
-        </motion.div>
-      )}
+      {/* Save Button */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <Button
+          onClick={handleSave}
+          disabled={updateMutation.isPending}
+          className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-3 rounded-lg font-semibold"
+        >
+          {updateMutation.isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Salvando...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Configurações
+            </>
+          )}
+        </Button>
+      </motion.div>
     </div>
   );
 }

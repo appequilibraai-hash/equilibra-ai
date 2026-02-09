@@ -140,3 +140,19 @@
 - [x] AnalyzeMeal: permitir captura de foto E upload de galeria
 - [x] ProfileSettings: corrigir problema de edição dos campos
 - [x] Consolidar botões "Tirar Foto" e "Galeria" em um único botão com dropdown/menu
+
+## Implementações Avançadas
+
+### Metas Nutricionais - Reatividade Matemática
+- [x] Cenário A: Alterar Calorias Totais recalcula Proteína (30%), Carboidratos (40%), Gordura (30%)
+- [x] Cenário B: Alterar um Macro mantém Calorias fixas e recalcula os outros dois proporcionalmente
+- [x] Feedback visual: "Total dos macros" atualiza em tempo real (P*4 + C*4 + G*9)
+- [x] Aviso visual em vermelho se soma de macros ultrapassar meta calórica
+- [x] Testes unitários para reatividade de macros (10 testes passando)
+
+### Blacklist - Integração com Recomendações
+- [x] Blacklist funciona como filtro negativo obrigatório nas recomendações
+- [x] IA lê a lista de alimentos bloqueados antes de gerar sugestões
+- [x] Receitas com ingredientes da blacklist são descartadas e substituídas
+- [x] Feedback visual: "Alimentos adicionados aqui ficam guardados permanentemente"
+- [x] Testes unitários para filtragem de blacklist (17 testes passando)

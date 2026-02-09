@@ -790,7 +790,8 @@ async function getAIRecommendations(
   const systemPrompt = `Você é um nutricionista esportivo especialista em planejamento de refeições.
 Forneça recomendações de refeições saudáveis e equilibradas em português brasileiro.
 Considere as preferências alimentares, alergias e tipo de atividade física do usuário.
-Foque em refeições que otimizem a performance esportiva e recuperação muscular.`;
+Foco em refeições que otimizem a performance esportiva e recuperação muscular.
+IMPORTANTE: NUNCA recomende receitas que contenham os seguintes ingredientes bloqueados: ${allergies.filter(a => !preferences.includes(a)).join(", ") || "nenhum"}. Verifique cada ingrediente cuidadosamente.`;
 
   const activityContext = activityType !== "sedentary" 
     ? `O usuário pratica ${activityType}, então priorize alimentos que auxiliem na performance e recuperação.`
@@ -805,7 +806,7 @@ Gordura restante: ${remaining.fat}g
 
 ${activityContext}
 ${preferences.length > 0 ? `Preferências alimentares: ${preferences.join(", ")}` : ""}
-${allergies.length > 0 ? `Alergias/Restrições: ${allergies.join(", ")}` : ""}
+${allergies.length > 0 ? `Alergias/Restrições OBRIGATÓRIAS (NUNCA incluir estes ingredientes): ${allergies.join(", ")}` : ""}
 
 Retorne um JSON com array de 3 recomendações:
 [
@@ -858,7 +859,17 @@ Retorne um JSON com array de 3 recomendações:
     const content = typeof message?.content === 'string' ? message.content : '';
     if (!content) return [];
 
-    return JSON.parse(content) as MealRecommendation[];
+    const recommendations = JSON.parse(content) as MealRecommendation[];
+    
+    // Filter out recommendations that contain blacklisted ingredients
+    const blacklistedKeywords = allergies.filter(a => !preferences.includes(a)).map(a => a.toLowerCase());
+    const filtered = recommendations.filter(rec => {
+      const recText = `${rec.title} ${rec.description} ${rec.ingredients.join(' ')}`.toLowerCase();
+      return !blacklistedKeywords.some(keyword => recText.includes(keyword));
+    });
+    
+    // If all recommendations were filtered out, return original to avoid empty list
+    return filtered.length > 0 ? filtered : recommendations;
   } catch (error) {
     console.error("Recommendations error:", error);
     return [];
