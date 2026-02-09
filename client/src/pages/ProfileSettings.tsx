@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import {
   User, Target, Scale, Dumbbell, Save, Loader2, Plus, X,
-  Calculator, Ban, Settings, AlertTriangle,
+  Calculator, Ban, Settings, AlertTriangle, Edit2, Check,
 } from "lucide-react";
 
 const activityTypes = [
@@ -35,6 +35,7 @@ export default function ProfileSettings() {
 
   const [newBlacklistItem, setNewBlacklistItem] = useState("");
   const [macroWarning, setMacroWarning] = useState("");
+  const [macroEditMode, setMacroEditMode] = useState(false);
 
   const [formData, setFormData] = useState({
     height: "",
@@ -460,7 +461,8 @@ export default function ProfileSettings() {
                 <Target className="h-5 w-5 text-emerald-500" />
                 Metas Nutricionais Diárias
               </CardTitle>
-              <Button
+              <div className="flex gap-2">
+                <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRecalculate}
@@ -474,6 +476,27 @@ export default function ProfileSettings() {
                 )}
                 Calcular
               </Button>
+                {!macroEditMode ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMacroEditMode(true)}
+                    className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                  >
+                    <Edit2 className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setMacroEditMode(false)}
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Salvar
+                  </Button>
+                )}
+              </div>
             </div>
             <CardDescription>
               Altere as calorias para recalcular macros (30% proteína, 40% carbs, 30% gordura). Altere um macro para ajustar os outros proporcionalmente.
@@ -486,9 +509,10 @@ export default function ProfileSettings() {
                 <Input
                   id="dailyCalorieGoal"
                   type="number"
+                  disabled={!macroEditMode}
                   value={formData.dailyCalorieGoal}
                   onChange={(e) => handleMacroChange("dailyCalorieGoal", e.target.value)}
-                  className="mt-1 border-amber-300 focus:ring-amber-500"
+                  className={`mt-1 ${macroEditMode ? 'border-amber-300 focus:ring-amber-500' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
                 />
               </div>
               <div>
@@ -496,9 +520,10 @@ export default function ProfileSettings() {
                 <Input
                   id="dailyProteinGoal"
                   type="number"
+                  disabled={!macroEditMode}
                   value={formData.dailyProteinGoal}
                   onChange={(e) => handleMacroChange("dailyProteinGoal", e.target.value)}
-                  className="mt-1 border-blue-300 focus:ring-blue-500"
+                  className={`mt-1 ${macroEditMode ? 'border-blue-300 focus:ring-blue-500' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyProteinGoal) * 4} kcal</span>
               </div>
@@ -507,9 +532,10 @@ export default function ProfileSettings() {
                 <Input
                   id="dailyCarbsGoal"
                   type="number"
+                  disabled={!macroEditMode}
                   value={formData.dailyCarbsGoal}
                   onChange={(e) => handleMacroChange("dailyCarbsGoal", e.target.value)}
-                  className="mt-1 border-green-300 focus:ring-green-500"
+                  className={`mt-1 ${macroEditMode ? 'border-green-300 focus:ring-green-500' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyCarbsGoal) * 4} kcal</span>
               </div>
@@ -518,9 +544,10 @@ export default function ProfileSettings() {
                 <Input
                   id="dailyFatGoal"
                   type="number"
+                  disabled={!macroEditMode}
                   value={formData.dailyFatGoal}
                   onChange={(e) => handleMacroChange("dailyFatGoal", e.target.value)}
-                  className="mt-1 border-orange-300 focus:ring-orange-500"
+                  className={`mt-1 ${macroEditMode ? 'border-orange-300 focus:ring-orange-500' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyFatGoal) * 9} kcal</span>
               </div>

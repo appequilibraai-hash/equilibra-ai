@@ -156,3 +156,13 @@
 - [x] Receitas com ingredientes da blacklist são descartadas e substituídas
 - [x] Feedback visual: "Alimentos adicionados aqui ficam guardados permanentemente"
 - [x] Testes unitários para filtragem de blacklist (17 testes passando)
+
+
+## Proteção Contra Edições Acidentais - Metas Nutricionais
+
+- [x] Implementar estado de bloqueio/desbloqueio para campos de macros
+- [x] Campos desabilitados por padrão (somente leitura)
+- [x] Botão "Editar" com ícone de lápis para ativar modo de edição
+- [x] Botão muda para "Salvar" (verde) quando em modo de edição
+- [x] Lógica matemática continua funcionando apenas em modo de edição
+- [x] Testar proteção contra edições acidentais
