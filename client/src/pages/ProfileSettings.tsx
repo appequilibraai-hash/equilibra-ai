@@ -630,26 +630,7 @@ export default function ProfileSettings() {
         </Card>
       </motion.div>
 
-      {/* Save Button */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-        <Button
-          onClick={handleSave}
-          disabled={updateMutation.isPending}
-          className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-3 rounded-lg font-semibold"
-        >
-          {updateMutation.isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar Configurações
-            </>
-          )}
-        </Button>
-      </motion.div>
+
     </div>
   );
 }

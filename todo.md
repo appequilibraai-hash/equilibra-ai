@@ -166,3 +166,4 @@
 - [x] Botão muda para "Salvar" (verde) quando em modo de edição
 - [x] Lógica matemática continua funcionando apenas em modo de edição
 - [x] Testar proteção contra edições acidentais
+- [x] Remover botão "Salvar Configurações" do final da página
