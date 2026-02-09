@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Upload, Loader2, Sparkles, Save, ChefHat, X } from "lucide-react";
+import { Camera, Upload, Loader2, Sparkles, Save, ChefHat, X, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useLocation } from "wouter";
 
 const HERO_IMAGE = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663337256181/lfdGXyjcUQOKGWLA.png";
@@ -174,47 +180,28 @@ export default function AnalyzeMeal() {
                 />
 
                 {!selectedImage ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => cameraInputRef.current?.click()}
-                        className="border-2 border-dashed border-emerald-300 rounded-2xl p-6 text-center bg-white/50 hover:bg-emerald-50/50 transition-colors"
-                      >
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-14 h-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
-                            <Camera className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-800 text-sm">
-                              Tirar Foto
-                            </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Câmera
-                            </p>
-                          </div>
-                        </div>
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-blue-300 rounded-2xl p-6 text-center bg-white/50 hover:bg-blue-50/50 transition-colors"
-                      >
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
-                            <Upload className="h-6 w-6 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-800 text-sm">
-                              Galeria
-                            </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Upload
-                            </p>
-                          </div>
-                        </div>
-                      </motion.button>
-                    </div>
+                  <div className="flex justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <motion.div whileHover={{ scale: 1.02 }} className="inline-block">
+                          <Button size="lg" className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-8 py-6 rounded-2xl flex items-center gap-2">
+                            <Camera className="h-5 w-5" />
+                            Adicionar Refeicao
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </motion.div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center" className="w-56">
+                        <DropdownMenuItem onClick={() => cameraInputRef.current?.click()}>
+                          <Camera className="h-4 w-4 mr-2" />
+                          <span>Tirar Foto</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          <span>Carregar da Galeria</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 ) : (
                   <div className="relative">

@@ -139,3 +139,4 @@
 
 - [x] AnalyzeMeal: permitir captura de foto E upload de galeria
 - [x] ProfileSettings: corrigir problema de edição dos campos
+- [x] Consolidar botões "Tirar Foto" e "Galeria" em um único botão com dropdown/menu
