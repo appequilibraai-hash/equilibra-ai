@@ -134,3 +134,8 @@
 - [x] Frequência semanal individual para cada atividade selecionada
 - [x] Macros interligados: ao definir 3, o 4o é calculado automaticamente (ou ajustado ao mais próximo)
 - [x] Blacklist persistente: alimentos ficam guardados até o usuário remover manualmente
+
+## Correções Pendentes
+
+- [x] AnalyzeMeal: permitir captura de foto E upload de galeria
+- [x] ProfileSettings: corrigir problema de edição dos campos

@@ -189,7 +189,6 @@ export default function ProfileSettings() {
   };
 
   const toggleActivity = (value: string) => {
-    if (!editMode) return;
     setFormData(prev => {
       if (value === "sedentary") {
         return {
@@ -211,7 +210,6 @@ export default function ProfileSettings() {
   };
 
   const setActivityFrequency = (activity: string, freq: number) => {
-    if (!editMode) return;
     setFormData(prev => ({
       ...prev,
       activityFrequencies: { ...prev.activityFrequencies, [activity]: freq },
@@ -326,20 +324,10 @@ export default function ProfileSettings() {
     <div className="space-y-6 max-w-3xl">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Settings className="h-5 w-5 text-emerald-500" />
-            Configurações
-          </h2>
-          <Button
-            variant={editMode ? "default" : "outline"}
-            size="sm"
-            onClick={() => setEditMode(!editMode)}
-            className={editMode ? "bg-emerald-500 hover:bg-emerald-600" : ""}
-          >
-            {editMode ? "Editando..." : "Editar Perfil"}
-          </Button>
-        </div>
+        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <Settings className="h-5 w-5 text-emerald-500" />
+          Configurações
+        </h2>
       </motion.div>
 
       {/* User Info */}
@@ -384,8 +372,7 @@ export default function ProfileSettings() {
                   type="number"
                   value={formData.height}
                   onChange={(e) => setFormData(prev => ({ ...prev, height: e.target.value }))}
-                  disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : ""}`}
+                  className="mt-1"
                 />
               </div>
               <div>
@@ -396,8 +383,7 @@ export default function ProfileSettings() {
                   step="0.1"
                   value={formData.currentWeight}
                   onChange={(e) => setFormData(prev => ({ ...prev, currentWeight: e.target.value }))}
-                  disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : ""}`}
+                  className="mt-1"
                 />
               </div>
               <div>
@@ -408,8 +394,7 @@ export default function ProfileSettings() {
                   step="0.1"
                   value={formData.targetWeight}
                   onChange={(e) => setFormData(prev => ({ ...prev, targetWeight: e.target.value }))}
-                  disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : ""}`}
+                  className="mt-1"
                 />
               </div>
             </div>
@@ -498,7 +483,6 @@ export default function ProfileSettings() {
                       <Select
                         value={(formData.activityFrequencies[actValue] || 3).toString()}
                         onValueChange={(v) => setActivityFrequency(actValue, Number(v))}
-                        disabled={!editMode}
                       >
                         <SelectTrigger className="w-32">
                           <SelectValue />
@@ -558,8 +542,7 @@ export default function ProfileSettings() {
                   value={formData.dailyCalorieGoal}
                   onChange={(e) => handleMacroChange("dailyCalorieGoal", e.target.value)}
                   onBlur={() => handleMacroBlur("dailyCalorieGoal")}
-                  disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : "border-amber-300 focus:ring-amber-500"}`}
+                  className="mt-1 border-amber-300 focus:ring-amber-500"
                 />
               </div>
               <div>
@@ -570,8 +553,7 @@ export default function ProfileSettings() {
                   value={formData.dailyProteinGoal}
                   onChange={(e) => handleMacroChange("dailyProteinGoal", e.target.value)}
                   onBlur={() => handleMacroBlur("dailyProteinGoal")}
-                  disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : "border-blue-300 focus:ring-blue-500"}`}
+                  className="mt-1 border-blue-300 focus:ring-blue-500"
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyProteinGoal) * 4} kcal</span>
               </div>
@@ -583,8 +565,7 @@ export default function ProfileSettings() {
                   value={formData.dailyCarbsGoal}
                   onChange={(e) => handleMacroChange("dailyCarbsGoal", e.target.value)}
                   onBlur={() => handleMacroBlur("dailyCarbsGoal")}
-                  disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : "border-green-300 focus:ring-green-500"}`}
+                  className="mt-1 border-green-300 focus:ring-green-500"
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyCarbsGoal) * 4} kcal</span>
               </div>
@@ -596,8 +577,7 @@ export default function ProfileSettings() {
                   value={formData.dailyFatGoal}
                   onChange={(e) => handleMacroChange("dailyFatGoal", e.target.value)}
                   onBlur={() => handleMacroBlur("dailyFatGoal")}
-                  disabled={!editMode}
-                  className={`mt-1 ${!editMode ? "bg-gray-50" : "border-orange-300 focus:ring-orange-500"}`}
+                  className="mt-1 border-orange-300 focus:ring-orange-500"
                 />
                 <span className="text-[10px] text-gray-400">{Number(formData.dailyFatGoal) * 9} kcal</span>
               </div>

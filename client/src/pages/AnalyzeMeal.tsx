@@ -48,6 +48,7 @@ export default function AnalyzeMeal() {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [mealType, setMealType] = useState<"breakfast" | "lunch" | "dinner" | "snack">("lunch");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const analyzeMutation = trpc.meals.analyzeOnly.useMutation();
   const saveMutation = trpc.meals.save.useMutation();
@@ -158,33 +159,63 @@ export default function AnalyzeMeal() {
               <div className="space-y-4">
                 <input
                   type="file"
-                  ref={fileInputRef}
+                  ref={cameraInputRef}
                   accept="image/*"
                   capture="environment"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
 
                 {!selectedImage ? (
-                  <motion.div
-                    className="border-2 border-dashed border-emerald-300 rounded-2xl p-8 text-center bg-white/50 hover:bg-emerald-50/50 transition-colors cursor-pointer mx-auto max-w-md"
-                    whileHover={{ scale: 1.01 }}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
-                        <Camera className="h-8 w-8 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-lg font-semibold text-gray-800">
-                          Fotografar Refeição
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          ou clique para carregar da galeria
-                        </p>
-                      </div>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="border-2 border-dashed border-emerald-300 rounded-2xl p-6 text-center bg-white/50 hover:bg-emerald-50/50 transition-colors"
+                      >
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center">
+                            <Camera className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800 text-sm">
+                              Tirar Foto
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Câmera
+                            </p>
+                          </div>
+                        </div>
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-blue-300 rounded-2xl p-6 text-center bg-white/50 hover:bg-blue-50/50 transition-colors"
+                      >
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                            <Upload className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800 text-sm">
+                              Galeria
+                            </p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Upload
+                            </p>
+                          </div>
+                        </div>
+                      </motion.button>
                     </div>
-                  </motion.div>
+                  </div>
                 ) : (
                   <div className="relative">
                     <img
