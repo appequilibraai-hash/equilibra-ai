@@ -241,7 +241,6 @@ export default function ProfileSettings() {
         }));
         setMacroWarning("");
         toast.success("Metas recalculadas automaticamente com base no seu perfil!");
-        refetch();
       } else {
         toast.error("Preencha todos os dados biométricos para recalcular.");
       }
