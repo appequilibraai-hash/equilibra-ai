@@ -280,13 +280,14 @@ export default function ProfileSettings() {
       setIsSaving(true);
       toast.loading("Salvando dados...");
       
-      // Convert DD/MM/YYYY to ISO format (YYYY-MM-DD)
+      // Convert DD/MM/YYYY to ISO format (YYYY-MM-DD) with noon UTC to avoid timezone issues
       const convertBrazilianToISO = (brazilianDate: string) => {
         if (!brazilianDate) return undefined;
         try {
           const [day, month, year] = brazilianDate.split('/');
           if (!day || !month || !year) return undefined;
-          return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          // Add T12:00:00Z to ensure date stays correct across timezones
+          return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T12:00:00Z`;
         } catch {
           return undefined;
         }
