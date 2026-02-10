@@ -74,8 +74,8 @@ export default function ProfileSettings() {
 
       setFormData({
         fullName: (profile as any).fullName || "",
-        dateOfBirth: (profile as any).dateOfBirth || "",
-        biologicalSex: (profile as any).biologicalSex || "",
+        dateOfBirth: (profile as any).birthDate || "",
+        biologicalSex: (profile as any).sex || "",
         mainObjective: (profile as any).mainObjective || "",
         height: (profile as any).height?.toString() || "",
         currentWeight: (profile as any).currentWeight?.toString() || "",
