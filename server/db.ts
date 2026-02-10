@@ -144,9 +144,22 @@ export async function updateUserProfile(
   const db = await getDb();
   if (!db) return undefined;
 
-  await db.update(userProfiles)
-    .set(updates)
-    .where(eq(userProfiles.userId, userId));
+  // First, check if profile exists
+  const existing = await getUserProfile(userId);
+  
+  if (existing) {
+    // Update existing profile
+    await db.update(userProfiles)
+      .set(updates)
+      .where(eq(userProfiles.userId, userId));
+  } else {
+    // Create new profile with userId and updates
+    const newProfile: InsertUserProfile = {
+      userId,
+      ...updates,
+    };
+    await db.insert(userProfiles).values(newProfile);
+  }
 
   return getUserProfile(userId);
 }
