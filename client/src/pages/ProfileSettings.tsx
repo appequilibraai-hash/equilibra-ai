@@ -311,8 +311,12 @@ export default function ProfileSettings() {
       });
       
       setIsSaving(false);
-      setHasUnsavedChanges(false);
       toast.success("Dados salvos com sucesso!");
+      
+      // Wait for mutation to complete and cache to update before allowing new changes
+      setTimeout(() => {
+        setHasUnsavedChanges(false);
+      }, 500);
     } catch (error) {
       setIsSaving(false);
       toast.error("Erro ao salvar configurações");
