@@ -201,3 +201,13 @@
 - [x] Implementar preservação de estado com prevState
 - [x] Garantir que apenas macros sejam atualizados
 - [x] Testar que nome, nascimento, sexo e objetivo não são alterados
+
+
+## Persistência Real de Dados
+
+- [x] Verificar que handleSave está enviando TODOS os campos para o banco
+- [x] Adicionar feedback visual "Salvando..." durante a requisição
+- [x] Adicionar feedback "Dados salvos com sucesso!" após sucesso
+- [x] Garantir que useEffect carrega dados ao montar a página
+- [x] Remover refetch() que causava sobrescrita de dados
+- [x] Testar que dados persistem após atualizar a página

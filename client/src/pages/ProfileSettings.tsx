@@ -57,6 +57,7 @@ export default function ProfileSettings() {
   const [newWeight, setNewWeight] = useState("");
   const [lastEditedMacro, setLastEditedMacro] = useState<string | null>(null);
   const [personalInfoEditMode, setPersonalInfoEditMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -251,6 +252,9 @@ export default function ProfileSettings() {
 
   const handleSave = async () => {
     try {
+      setIsSaving(true);
+      toast.loading("Salvando dados...");
+      
       await updateMutation.mutateAsync({
         fullName: formData.fullName || undefined,
         sex: formData.biologicalSex as any || undefined,
@@ -267,10 +271,13 @@ export default function ProfileSettings() {
         dailyFatGoal: formData.dailyFatGoal ? Number(formData.dailyFatGoal) : undefined,
         blacklistedFoods: formData.blacklistedFoods,
       });
-      toast.success("Configurações salvas com sucesso!");
-      refetch();
-    } catch {
+      
+      setIsSaving(false);
+      toast.success("Dados salvos com sucesso!");
+    } catch (error) {
+      setIsSaving(false);
       toast.error("Erro ao salvar configurações");
+      console.error("Erro ao salvar:", error);
     }
   };
 
@@ -279,7 +286,7 @@ export default function ProfileSettings() {
       await updateMutation.mutateAsync({
         blacklistedFoods: foods,
       });
-      refetch();
+      toast.success("Lista de alimentos atualizada!");
     } catch {
       toast.error("Erro ao salvar lista de alimentos");
     }
