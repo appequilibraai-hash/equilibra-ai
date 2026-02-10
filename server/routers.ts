@@ -160,7 +160,11 @@ export const appRouter = router({
         const updates: Record<string, any> = {};
         if (input.fullName !== undefined) updates.fullName = input.fullName;
         if (input.sex !== undefined) updates.sex = input.sex;
-        if (input.birthDate !== undefined) updates.birthDate = new Date(input.birthDate);
+        if (input.birthDate !== undefined) {
+          // Extract only the date part (YYYY-MM-DD) to avoid timezone issues
+          const date = new Date(input.birthDate);
+          updates.birthDate = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+        }
         if (input.mainObjective !== undefined) updates.mainObjective = input.mainObjective;
         if (input.height !== undefined) updates.height = input.height;
         if (input.currentWeight !== undefined) updates.currentWeight = input.currentWeight;
