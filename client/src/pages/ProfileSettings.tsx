@@ -370,11 +370,19 @@ export default function ProfileSettings() {
               ) : (
                 <Button
                   size="sm"
-                  onClick={() => setPersonalInfoEditMode(false)}
+                  onClick={async () => {
+                    await handleSave();
+                    setPersonalInfoEditMode(false);
+                  }}
+                  disabled={isSaving}
                   className="bg-emerald-500 hover:bg-emerald-600 text-white"
                 >
-                  <Check className="h-4 w-4 mr-1" />
-                  Salvar
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  ) : (
+                    <Check className="h-4 w-4 mr-1" />
+                  )}
+                  {isSaving ? 'Salvando...' : 'Salvar'}
                 </Button>
               )}
             </div>
