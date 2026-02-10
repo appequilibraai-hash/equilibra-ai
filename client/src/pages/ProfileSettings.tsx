@@ -58,25 +58,7 @@ export default function ProfileSettings() {
   const [lastEditedMacro, setLastEditedMacro] = useState<string | null>(null);
   const [personalInfoEditMode, setPersonalInfoEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-
-  // Track if data was just saved to avoid overwriting with stale server data
-  const [lastSaveTime, setLastSaveTime] = useState<number>(0);
-
-  // Only refetch if enough time has passed since last save (avoid race conditions)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        const timeSinceSave = Date.now() - lastSaveTime;
-        // Only refetch if more than 2 seconds have passed since last save
-        if (timeSinceSave > 2000) {
-          refetch();
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [refetch, lastSaveTime]);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -105,9 +87,11 @@ export default function ProfileSettings() {
         }
       };
 
-      setFormData({
-        fullName: (profile as any).fullName || "",
-        dateOfBirth: formatDateToBrazilian((profile as any).birthDate),
+      // Only update formData if no unsaved changes
+      if (!hasUnsavedChanges) {
+        setFormData({
+          fullName: (profile as any).fullName || "",
+          dateOfBirth: formatDateToBrazilian((profile as any).birthDate),
         biologicalSex: (profile as any).sex || "",
         mainObjective: (profile as any).mainObjective || "",
         height: (profile as any).height?.toString() || "",
@@ -119,10 +103,11 @@ export default function ProfileSettings() {
         dailyProteinGoal: profile.dailyProteinGoal?.toString() || "",
         dailyCarbsGoal: profile.dailyCarbsGoal?.toString() || "",
         dailyFatGoal: profile.dailyFatGoal?.toString() || "",
-        blacklistedFoods: (profile as any).blacklistedFoods || [],
-      });
+          blacklistedFoods: (profile as any).blacklistedFoods || [],
+        });
+      }
     }
-  }, [profile]);
+  }, [profile, hasUnsavedChanges]);
 
   // Advanced macro reactivity: 2 scenarios
   const recalcMacros = useCallback((data: typeof formData, editedField: string) => {
@@ -283,6 +268,12 @@ export default function ProfileSettings() {
     }
   };
 
+  // Mark changes when user edits any field
+  const handleFieldChange = (field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setHasUnsavedChanges(true);
+  };
+
   const handleSave = async () => {
     try {
       setIsSaving(true);
@@ -318,7 +309,7 @@ export default function ProfileSettings() {
       });
       
       setIsSaving(false);
-      setLastSaveTime(Date.now()); // Mark when data was saved
+      setHasUnsavedChanges(false);
       toast.success("Dados salvos com sucesso!");
     } catch (error) {
       setIsSaving(false);
@@ -454,7 +445,7 @@ export default function ProfileSettings() {
                   placeholder="DD/MM/AAAA"
                   disabled={!personalInfoEditMode}
                   value={formData.dateOfBirth}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  onChange={(e) => handleFieldChange('dateOfBirth', e.target.value)}
                   className={`mt-1 ${personalInfoEditMode ? '' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
                 />
               </div>
