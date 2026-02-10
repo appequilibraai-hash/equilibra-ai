@@ -18,26 +18,26 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       {/* Fixed Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-emerald-100">
-        <div className="container mx-auto px-4">
-          <nav className="flex items-center justify-between h-16">
-            {/* Logo */}
+        <div className="container mx-auto px-4 py-0">
+          <nav className="flex items-center justify-between h-16 gap-4 md:gap-8">
+            {/* Logo - Flex shrink to prevent overflow */}
             <Link href="/">
               <motion.div 
-                className="flex items-center gap-2 cursor-pointer"
+                className="flex items-center gap-2 cursor-pointer flex-shrink-0"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <img src={LOGO_URL} alt="Equilibra AI" className="h-10 w-auto" />
-                <span className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                <span className="text-lg md:text-xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent whitespace-nowrap">
                   Equilibra AI
                 </span>
               </motion.div>
             </Link>
 
-            {/* Navigation Links */}
-            <div className="flex items-center gap-6">
+            {/* Navigation Links - Flex grow to push button right */}
+            <div className="flex items-center justify-end gap-4 md:gap-6 flex-1">
               <Link href="/about">
-                <span className={`text-sm font-medium transition-colors hover:text-emerald-600 cursor-pointer ${
+                <span className={`text-xs md:text-sm font-medium transition-colors hover:text-emerald-600 cursor-pointer whitespace-nowrap ${
                   location === "/about" ? "text-emerald-600" : "text-gray-600"
                 }`}>
                   Sobre
@@ -45,7 +45,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               </Link>
               
               <Link href="/">
-                <span className={`text-sm font-medium transition-colors hover:text-emerald-600 cursor-pointer ${
+                <span className={`text-xs md:text-sm font-medium transition-colors hover:text-emerald-600 cursor-pointer whitespace-nowrap ${
                   location === "/" || location === "/analyze" ? "text-emerald-600" : "text-gray-600"
                 }`}>
                   Analisar Refeição
