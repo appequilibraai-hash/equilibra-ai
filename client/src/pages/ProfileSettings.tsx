@@ -58,7 +58,7 @@ export default function ProfileSettings() {
   const [lastEditedMacro, setLastEditedMacro] = useState<string | null>(null);
   const [personalInfoEditMode, setPersonalInfoEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -88,8 +88,8 @@ export default function ProfileSettings() {
         }
       };
 
-      // Only update formData if no unsaved changes
-      if (!hasUnsavedChanges) {
+      // Only update formData if not editing
+      if (!isEditing) {
         setFormData({
           fullName: (profile as any).fullName || "",
           dateOfBirth: formatDateToBrazilian((profile as any).birthDate),
@@ -108,7 +108,7 @@ export default function ProfileSettings() {
         });
       }
     }
-  }, [profile, hasUnsavedChanges]);
+  }, [profile, isEditing]);
 
   // Advanced macro reactivity: 2 scenarios
   const recalcMacros = useCallback((data: typeof formData, editedField: string) => {
@@ -272,7 +272,7 @@ export default function ProfileSettings() {
   // Mark changes when user edits any field
   const handleFieldChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    setHasUnsavedChanges(true);
+    setIsEditing(true);
   };
 
   const handleSave = async () => {
@@ -313,10 +313,8 @@ export default function ProfileSettings() {
       setIsSaving(false);
       toast.success("Dados salvos com sucesso!");
       
-      // Wait for mutation to complete and cache to update before allowing new changes
-      setTimeout(() => {
-        setHasUnsavedChanges(false);
-      }, 500);
+      // Reset editing state after save
+      setIsEditing(false);
     } catch (error) {
       setIsSaving(false);
       toast.error("Erro ao salvar configurações");
