@@ -59,6 +59,18 @@ export default function ProfileSettings() {
   const [personalInfoEditMode, setPersonalInfoEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Refetch profile when component becomes visible (user returns to this tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refetch();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refetch]);
+
   useEffect(() => {
     if (profile) {
       const types = (profile as any).activityType
@@ -72,9 +84,23 @@ export default function ProfileSettings() {
         }
       });
 
+      // Convert ISO date to DD/MM/YYYY format for display
+      const formatDateToBrazilian = (isoDate: string) => {
+        if (!isoDate) return "";
+        try {
+          const date = new Date(isoDate);
+          const day = String(date.getDate()).padStart(2, '0');
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const year = date.getFullYear();
+          return `${day}/${month}/${year}`;
+        } catch {
+          return "";
+        }
+      };
+
       setFormData({
         fullName: (profile as any).fullName || "",
-        dateOfBirth: (profile as any).birthDate || "",
+        dateOfBirth: formatDateToBrazilian((profile as any).birthDate),
         biologicalSex: (profile as any).sex || "",
         mainObjective: (profile as any).mainObjective || "",
         height: (profile as any).height?.toString() || "",
@@ -255,10 +281,22 @@ export default function ProfileSettings() {
       setIsSaving(true);
       toast.loading("Salvando dados...");
       
+      // Convert DD/MM/YYYY to ISO format (YYYY-MM-DD)
+      const convertBrazilianToISO = (brazilianDate: string) => {
+        if (!brazilianDate) return undefined;
+        try {
+          const [day, month, year] = brazilianDate.split('/');
+          if (!day || !month || !year) return undefined;
+          return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        } catch {
+          return undefined;
+        }
+      };
+      
       await updateMutation.mutateAsync({
         fullName: formData.fullName || undefined,
         sex: formData.biologicalSex as any || undefined,
-        birthDate: formData.dateOfBirth || undefined,
+        birthDate: convertBrazilianToISO(formData.dateOfBirth),
         mainObjective: formData.mainObjective as any || undefined,
         height: formData.height ? Number(formData.height) : undefined,
         currentWeight: formData.currentWeight ? Number(formData.currentWeight) : undefined,
@@ -401,10 +439,11 @@ export default function ProfileSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="dateOfBirth" className="text-xs">Data de Nascimento</Label>
+                <Label htmlFor="dateOfBirth" className="text-xs">Data de Nascimento (DD/MM/AAAA)</Label>
                 <Input
                   id="dateOfBirth"
-                  type="date"
+                  type="text"
+                  placeholder="DD/MM/AAAA"
                   disabled={!personalInfoEditMode}
                   value={formData.dateOfBirth}
                   onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
