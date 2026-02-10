@@ -192,3 +192,12 @@
 - [x] Atualizar mutation de salvamento de perfil para incluir novos campos
 - [x] Atualizar query de carregamento de perfil para ler novos campos
 - [x] Testar salvamento e carregamento dos novos campos
+
+
+## Correção Crítica - Botão Calcular
+
+- [x] Corrigir perda de dados pessoais ao clicar em "Calcular"
+- [x] Impedir que "Atividade Física" mude para "Ciclismo" automaticamente
+- [x] Implementar preservação de estado com prevState
+- [x] Garantir que apenas macros sejam atualizados
+- [x] Testar que nome, nascimento, sexo e objetivo não são alterados

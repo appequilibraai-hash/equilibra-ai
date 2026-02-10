@@ -224,11 +224,20 @@ export default function ProfileSettings() {
       const result = await recalcMutation.mutateAsync();
       if (result) {
         setFormData(prev => ({
-          ...prev,
+          fullName: prev.fullName,
+          dateOfBirth: prev.dateOfBirth,
+          biologicalSex: prev.biologicalSex,
+          mainObjective: prev.mainObjective,
+          height: prev.height,
+          currentWeight: prev.currentWeight,
+          targetWeight: prev.targetWeight,
+          activityTypes: prev.activityTypes,
+          activityFrequencies: prev.activityFrequencies,
           dailyCalorieGoal: result.dailyCalorieGoal.toString(),
           dailyProteinGoal: result.dailyProteinGoal.toString(),
           dailyCarbsGoal: result.dailyCarbsGoal.toString(),
           dailyFatGoal: result.dailyFatGoal.toString(),
+          blacklistedFoods: prev.blacklistedFoods,
         }));
         setMacroWarning("");
         toast.success("Metas recalculadas automaticamente com base no seu perfil!");
