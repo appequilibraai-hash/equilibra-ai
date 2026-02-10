@@ -59,17 +59,24 @@ export default function ProfileSettings() {
   const [personalInfoEditMode, setPersonalInfoEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Refetch profile when component becomes visible (user returns to this tab)
+  // Track if data was just saved to avoid overwriting with stale server data
+  const [lastSaveTime, setLastSaveTime] = useState<number>(0);
+
+  // Only refetch if enough time has passed since last save (avoid race conditions)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        refetch();
+        const timeSinceSave = Date.now() - lastSaveTime;
+        // Only refetch if more than 2 seconds have passed since last save
+        if (timeSinceSave > 2000) {
+          refetch();
+        }
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [refetch]);
+  }, [refetch, lastSaveTime]);
 
   useEffect(() => {
     if (profile) {
@@ -311,6 +318,7 @@ export default function ProfileSettings() {
       });
       
       setIsSaving(false);
+      setLastSaveTime(Date.now()); // Mark when data was saved
       toast.success("Dados salvos com sucesso!");
     } catch (error) {
       setIsSaving(false);
