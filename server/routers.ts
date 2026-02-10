@@ -138,8 +138,10 @@ export const appRouter = router({
 
     update: protectedProcedure
       .input(z.object({
+        fullName: z.string().optional(),
         sex: z.enum(["male", "female", "other"]).optional(),
         birthDate: z.string().optional(),
+        mainObjective: z.enum(["lose_fat", "maintain", "gain_muscle"]).optional(),
         height: z.number().min(100).max(250).optional(),
         currentWeight: z.number().min(30).max(300).optional(),
         targetWeight: z.number().min(30).max(300).optional(),

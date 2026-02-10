@@ -27,9 +27,13 @@ export const userProfiles = mysqlTable("userProfiles", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().unique(),
   
+  // Personal information
+  fullName: varchar("fullName", { length: 255 }),
+  
   // Biometric data
   sex: mysqlEnum("sex", ["male", "female", "other"]),
   birthDate: date("birthDate"),
+  mainObjective: mysqlEnum("mainObjective", ["lose_fat", "maintain", "gain_muscle"]),
   height: int("height"), // cm
   currentWeight: decimal("currentWeight", { precision: 5, scale: 2 }), // kg
   targetWeight: decimal("targetWeight", { precision: 5, scale: 2 }), // kg

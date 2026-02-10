@@ -115,8 +115,10 @@ export async function upsertUserProfile(profile: InsertUserProfile): Promise<Use
 
   await db.insert(userProfiles).values(profile).onDuplicateKeyUpdate({
     set: {
+      fullName: profile.fullName,
       sex: profile.sex,
       birthDate: profile.birthDate,
+      mainObjective: profile.mainObjective,
       height: profile.height,
       currentWeight: profile.currentWeight,
       targetWeight: profile.targetWeight,
@@ -128,6 +130,7 @@ export async function upsertUserProfile(profile: InsertUserProfile): Promise<Use
       dailyFatGoal: profile.dailyFatGoal,
       dietaryPreferences: profile.dietaryPreferences,
       allergies: profile.allergies,
+      blacklistedFoods: profile.blacklistedFoods,
     },
   });
 

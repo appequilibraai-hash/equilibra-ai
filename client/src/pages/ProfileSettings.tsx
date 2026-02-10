@@ -244,6 +244,10 @@ export default function ProfileSettings() {
   const handleSave = async () => {
     try {
       await updateMutation.mutateAsync({
+        fullName: formData.fullName || undefined,
+        sex: formData.biologicalSex as any || undefined,
+        birthDate: formData.dateOfBirth || undefined,
+        mainObjective: formData.mainObjective as any || undefined,
         height: formData.height ? Number(formData.height) : undefined,
         currentWeight: formData.currentWeight ? Number(formData.currentWeight) : undefined,
         targetWeight: formData.targetWeight ? Number(formData.targetWeight) : undefined,

@@ -184,3 +184,11 @@
 - [x] Remover opção "Registrar Peso" da seção de Dados Físicos
 - [x] Renomear "Sexo Biológico" para "Sexo"
 - [x] Bloquear campos físicos até clicar em "editar"
+
+
+## Correção de Persistência de Dados
+
+- [x] Atualizar schema do banco para incluir campos: fullName, dateOfBirth, biologicalSex, mainObjective
+- [x] Atualizar mutation de salvamento de perfil para incluir novos campos
+- [x] Atualizar query de carregamento de perfil para ler novos campos
+- [x] Testar salvamento e carregamento dos novos campos
