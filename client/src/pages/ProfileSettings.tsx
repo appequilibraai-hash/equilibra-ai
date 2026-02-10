@@ -385,7 +385,7 @@ export default function ProfileSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="biologicalSex" className="text-xs">Sexo Biológico</Label>
+                <Label htmlFor="biologicalSex" className="text-xs">Sexo</Label>
                 <Select
                   value={formData.biologicalSex}
                   onValueChange={(val) => setFormData(prev => ({ ...prev, biologicalSex: val }))}
@@ -426,9 +426,10 @@ export default function ProfileSettings() {
                 <Input
                   id="height"
                   type="number"
+                  disabled={!personalInfoEditMode}
                   value={formData.height}
                   onChange={(e) => setFormData(prev => ({ ...prev, height: e.target.value }))}
-                  className="mt-1"
+                  className={`mt-1 ${personalInfoEditMode ? '' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
                 />
               </div>
               <div>
@@ -436,9 +437,10 @@ export default function ProfileSettings() {
                 <Input
                   id="currentWeight"
                   type="number"
+                  disabled={!personalInfoEditMode}
                   value={formData.currentWeight}
                   onChange={(e) => setFormData(prev => ({ ...prev, currentWeight: e.target.value }))}
-                  className="mt-1"
+                  className={`mt-1 ${personalInfoEditMode ? '' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
                 />
               </div>
               <div>
@@ -446,31 +448,13 @@ export default function ProfileSettings() {
                 <Input
                   id="targetWeight"
                   type="number"
+                  disabled={!personalInfoEditMode}
                   value={formData.targetWeight}
                   onChange={(e) => setFormData(prev => ({ ...prev, targetWeight: e.target.value }))}
-                  className="mt-1"
+                  className={`mt-1 ${personalInfoEditMode ? '' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
                 />
               </div>
-              <div>
-                <Label htmlFor="newWeight" className="text-xs">Registrar Peso</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    id="newWeight"
-                    type="number"
-                    placeholder="kg"
-                    value={newWeight}
-                    onChange={(e) => setNewWeight(e.target.value)}
-                  />
-                  <Button
-                    size="sm"
-                    onClick={handleAddWeight}
-                    disabled={addWeightMutation.isPending}
-                    className="bg-emerald-500 hover:bg-emerald-600"
-                  >
-                    {addWeightMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
+
             </div>
             </div>
           </CardContent>

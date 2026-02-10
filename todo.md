@@ -181,3 +181,6 @@
 - [x] Botão muda para "Salvar" quando em modo de edição
 - [x] Conexão inteligente com cálculo de metas nutricionais
 - [x] Testar integração de dados com cálculo de metas
+- [x] Remover opção "Registrar Peso" da seção de Dados Físicos
+- [x] Renomear "Sexo Biológico" para "Sexo"
+- [x] Bloquear campos físicos até clicar em "editar"
