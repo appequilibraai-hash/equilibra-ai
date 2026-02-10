@@ -157,11 +157,24 @@ export const appRouter = router({
         blacklistedFoods: z.array(z.string()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const updates: Record<string, any> = { ...input };
-        if (input.birthDate) updates.birthDate = new Date(input.birthDate);
-        if (input.currentWeight) updates.currentWeight = String(input.currentWeight);
-        if (input.targetWeight) updates.targetWeight = String(input.targetWeight);
-        if (input.activityFrequencies) updates.activityFrequencies = JSON.stringify(input.activityFrequencies);
+        const updates: Record<string, any> = {};
+        if (input.fullName !== undefined) updates.fullName = input.fullName;
+        if (input.sex !== undefined) updates.sex = input.sex;
+        if (input.birthDate !== undefined) updates.birthDate = new Date(input.birthDate);
+        if (input.mainObjective !== undefined) updates.mainObjective = input.mainObjective;
+        if (input.height !== undefined) updates.height = input.height;
+        if (input.currentWeight !== undefined) updates.currentWeight = input.currentWeight;
+        if (input.targetWeight !== undefined) updates.targetWeight = input.targetWeight;
+        if (input.activityType !== undefined) updates.activityType = input.activityType;
+        if (input.activityFrequency !== undefined) updates.activityFrequency = input.activityFrequency;
+        if (input.activityFrequencies !== undefined) updates.activityFrequencies = input.activityFrequencies;
+        if (input.dailyCalorieGoal !== undefined) updates.dailyCalorieGoal = input.dailyCalorieGoal;
+        if (input.dailyProteinGoal !== undefined) updates.dailyProteinGoal = input.dailyProteinGoal;
+        if (input.dailyCarbsGoal !== undefined) updates.dailyCarbsGoal = input.dailyCarbsGoal;
+        if (input.dailyFatGoal !== undefined) updates.dailyFatGoal = input.dailyFatGoal;
+        if (input.dietaryPreferences !== undefined) updates.dietaryPreferences = input.dietaryPreferences;
+        if (input.allergies !== undefined) updates.allergies = input.allergies;
+        if (input.blacklistedFoods !== undefined) updates.blacklistedFoods = input.blacklistedFoods;
         
         return updateUserProfile(ctx.user.id, updates);
       }),
