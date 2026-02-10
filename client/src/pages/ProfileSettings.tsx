@@ -38,6 +38,10 @@ export default function ProfileSettings() {
   const [macroEditMode, setMacroEditMode] = useState(false);
 
   const [formData, setFormData] = useState({
+    fullName: "",
+    dateOfBirth: "",
+    biologicalSex: "",
+    mainObjective: "",
     height: "",
     currentWeight: "",
     targetWeight: "",
@@ -52,6 +56,7 @@ export default function ProfileSettings() {
 
   const [newWeight, setNewWeight] = useState("");
   const [lastEditedMacro, setLastEditedMacro] = useState<string | null>(null);
+  const [personalInfoEditMode, setPersonalInfoEditMode] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -67,6 +72,10 @@ export default function ProfileSettings() {
       });
 
       setFormData({
+        fullName: (profile as any).fullName || "",
+        dateOfBirth: (profile as any).dateOfBirth || "",
+        biologicalSex: (profile as any).biologicalSex || "",
+        mainObjective: (profile as any).mainObjective || "",
         height: (profile as any).height?.toString() || "",
         currentWeight: (profile as any).currentWeight?.toString() || "",
         targetWeight: (profile as any).targetWeight?.toString() || "",
@@ -324,13 +333,94 @@ export default function ProfileSettings() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-emerald-500" />
-              Informações Pessoais
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-emerald-500" />
+                Informações Pessoais
+              </CardTitle>
+              {!personalInfoEditMode ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPersonalInfoEditMode(true)}
+                  className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+                >
+                  <Edit2 className="h-4 w-4 mr-1" />
+                  Editar
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => setPersonalInfoEditMode(false)}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  Salvar
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="fullName" className="text-xs">Nome Completo</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  disabled={!personalInfoEditMode}
+                  value={formData.fullName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                  className={`mt-1 ${personalInfoEditMode ? '' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
+                />
+              </div>
+              <div>
+                <Label htmlFor="dateOfBirth" className="text-xs">Data de Nascimento</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  disabled={!personalInfoEditMode}
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  className={`mt-1 ${personalInfoEditMode ? '' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}
+                />
+              </div>
+              <div>
+                <Label htmlFor="biologicalSex" className="text-xs">Sexo Biológico</Label>
+                <Select
+                  value={formData.biologicalSex}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, biologicalSex: val }))}
+                  disabled={!personalInfoEditMode}
+                >
+                  <SelectTrigger className={`mt-1 ${personalInfoEditMode ? '' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Masculino</SelectItem>
+                    <SelectItem value="female">Feminino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="mainObjective" className="text-xs">Objetivo Principal</Label>
+                <Select
+                  value={formData.mainObjective}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, mainObjective: val }))}
+                  disabled={!personalInfoEditMode}
+                >
+                  <SelectTrigger className={`mt-1 ${personalInfoEditMode ? '' : 'bg-gray-100 text-gray-600 cursor-not-allowed'}`}>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lose_fat">Perder Gordura</SelectItem>
+                    <SelectItem value="maintain">Manter Peso</SelectItem>
+                    <SelectItem value="gain_muscle">Ganhar Músculo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="border-t pt-4 mt-4">
+              <p className="text-xs font-semibold text-gray-700 mb-3">Dados Físicos</p>
+              <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="height" className="text-xs">Altura (cm)</Label>
                 <Input
@@ -381,6 +471,7 @@ export default function ProfileSettings() {
                   </Button>
                 </div>
               </div>
+            </div>
             </div>
           </CardContent>
         </Card>

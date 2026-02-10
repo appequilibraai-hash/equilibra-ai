@@ -168,3 +168,16 @@
 - [x] Testar proteção contra edições acidentais
 - [x] Remover botão "Salvar Configurações" do final da página
 - [x] Atualizar descrição da seção "Metas Nutricionais Diárias" para ser mais clara e intuitiva
+
+
+## Expansão de Informações Pessoais
+
+- [x] Adicionar campo Nome Completo
+- [x] Adicionar campo Data de Nascimento
+- [x] Adicionar campo Sexo Biológico (seletor)
+- [x] Adicionar campo Objetivo Principal (seletor)
+- [x] Implementar modo de edição/bloqueio para Informações Pessoais
+- [x] Botão "Editar" com ícone de lápis
+- [x] Botão muda para "Salvar" quando em modo de edição
+- [x] Conexão inteligente com cálculo de metas nutricionais
+- [x] Testar integração de dados com cálculo de metas
