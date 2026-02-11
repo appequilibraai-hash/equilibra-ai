@@ -36,7 +36,7 @@ describe("Profile Persistence", () => {
     const updates = {
       fullName: "João Silva",
       sex: "male" as const,
-      birthDate: new Date("1990-01-15"),
+      birthDate: "1990-01-15",
       mainObjective: "gain_muscle" as const,
       height: 180,
       currentWeight: 75,
@@ -97,7 +97,7 @@ describe("Profile Persistence", () => {
     const fullUpdate = {
       fullName: "Complete Test",
       sex: "female" as const,
-      birthDate: new Date("1995-06-20"),
+      birthDate: "1995-06-20",
       mainObjective: "lose_fat" as const,
       height: 165,
       currentWeight: 65,

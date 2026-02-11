@@ -35,7 +35,7 @@ describe("Profile Save Flow - Complete Integration", () => {
     const updates = {
       fullName: "João da Silva",
       sex: "male" as const,
-      birthDate: new Date("1990-05-15"),
+      birthDate: "1990-05-15",
       mainObjective: "gain_muscle" as const,
     };
 

@@ -32,7 +32,7 @@ export const userProfiles = mysqlTable("userProfiles", {
   
   // Biometric data
   sex: mysqlEnum("sex", ["male", "female", "other"]),
-  birthDate: date("birthDate"),
+  birthDate: varchar("birthDate", { length: 10 }), // YYYY-MM-DD format
   mainObjective: mysqlEnum("mainObjective", ["lose_fat", "maintain", "gain_muscle"]),
   height: int("height"), // cm
   currentWeight: decimal("currentWeight", { precision: 5, scale: 2 }), // kg

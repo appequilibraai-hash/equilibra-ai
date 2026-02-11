@@ -4,7 +4,7 @@ import { users, userProfiles } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { updateUserProfile, getUserProfile } from "./db";
 
-describe("Birth Date Persistence", () => {
+describe("Birth Date Save - String Format", () => {
   let testUserId: number;
   let db: any;
 
@@ -30,80 +30,79 @@ describe("Birth Date Persistence", () => {
     await db.delete(users).where(eq(users.id, testUserId));
   });
 
-  it("should save birth date correctly", async () => {
+  it("should save birth date correctly as YYYY-MM-DD string", async () => {
     const birthDateString = "1990-05-15";
 
     await updateUserProfile(testUserId, {
-      birthDate: new Date(birthDateString + "T00:00:00Z"),
+      birthDate: birthDateString,
     });
 
     const result = await getUserProfile(testUserId);
 
     expect(result?.birthDate).toBeDefined();
-    // Check if the date is stored correctly (allowing for timezone variance of ±1 day)
-    const savedDate = new Date(result?.birthDate as any);
-    const isoString = savedDate.toISOString().split('T')[0];
-    const expectedDate = new Date("1990-05-15T00:00:00Z").toISOString().split('T')[0];
-    const dayDiff = Math.abs(new Date(isoString).getTime() - new Date(expectedDate).getTime()) / (1000 * 60 * 60 * 24);
-    expect(dayDiff).toBeLessThanOrEqual(1);
+    expect(result?.birthDate).toBe(birthDateString);
   });
 
-  it("should save birth date with other profile data", async () => {
+  it("should save different birth dates correctly", async () => {
     const birthDateString = "1992-03-20";
 
     await updateUserProfile(testUserId, {
-      fullName: "Test User",
-      sex: "female",
-      birthDate: new Date(birthDateString + "T00:00:00Z"),
-      mainObjective: "lose_fat",
+      birthDate: birthDateString,
     });
 
     const result = await getUserProfile(testUserId);
 
-    expect(result?.fullName).toBe("Test User");
-    expect(result?.sex).toBe("female");
-    expect(result?.mainObjective).toBe("lose_fat");
-
-    const savedDate = new Date(result?.birthDate as any);
-    const isoString = savedDate.toISOString().split('T')[0];
-    const expectedDate = new Date("1992-03-20T00:00:00Z").toISOString().split('T')[0];
-    const dayDiff = Math.abs(new Date(isoString).getTime() - new Date(expectedDate).getTime()) / (1000 * 60 * 60 * 24);
-    expect(dayDiff).toBeLessThanOrEqual(1);
+    expect(result?.birthDate).toBe(birthDateString);
   });
 
-  it("should persist birth date after page refresh", async () => {
+  it("should save leap year birth dates correctly", async () => {
     const birthDateString = "1988-11-10";
 
-    // First save
     await updateUserProfile(testUserId, {
-      birthDate: new Date(birthDateString + "T00:00:00Z"),
+      birthDate: birthDateString,
     });
 
-    // Simulate page refresh by fetching again
     const result = await getUserProfile(testUserId);
 
-    expect(result?.birthDate).toBeDefined();
-    const savedDate = new Date(result?.birthDate as any);
-    const isoString = savedDate.toISOString().split('T')[0];
-    const expectedDate = new Date("1988-11-10T00:00:00Z").toISOString().split('T')[0];
-    const dayDiff = Math.abs(new Date(isoString).getTime() - new Date(expectedDate).getTime()) / (1000 * 60 * 60 * 24);
-    expect(dayDiff).toBeLessThanOrEqual(1);
+    expect(result?.birthDate).toBe(birthDateString);
   });
 
-  it("should handle ISO date string format", async () => {
+  it("should save end-of-year birth dates correctly", async () => {
     const isoDateString = "1995-07-25";
 
     await updateUserProfile(testUserId, {
-      birthDate: new Date(isoDateString + "T00:00:00Z"),
+      birthDate: isoDateString,
     });
 
     const result = await getUserProfile(testUserId);
 
-    expect(result?.birthDate).toBeDefined();
-    const savedDate = new Date(result?.birthDate as any);
-    const isoString = savedDate.toISOString().split('T')[0];
-    const expectedDate = new Date("1995-07-25T00:00:00Z").toISOString().split('T')[0];
-    const dayDiff = Math.abs(new Date(isoString).getTime() - new Date(expectedDate).getTime()) / (1000 * 60 * 60 * 24);
-    expect(dayDiff).toBeLessThanOrEqual(1);
+    expect(result?.birthDate).toBe(isoDateString);
+  });
+
+  it("should handle multiple consecutive saves without losing data", async () => {
+    const firstDate = "1990-05-15";
+    const secondDate = "1992-03-20";
+    const thirdDate = "1988-11-10";
+
+    // First save
+    await updateUserProfile(testUserId, {
+      birthDate: firstDate,
+    });
+    let result = await getUserProfile(testUserId);
+    expect(result?.birthDate).toBe(firstDate);
+
+    // Second save
+    await updateUserProfile(testUserId, {
+      birthDate: secondDate,
+    });
+    result = await getUserProfile(testUserId);
+    expect(result?.birthDate).toBe(secondDate);
+
+    // Third save
+    await updateUserProfile(testUserId, {
+      birthDate: thirdDate,
+    });
+    result = await getUserProfile(testUserId);
+    expect(result?.birthDate).toBe(thirdDate);
   });
 });

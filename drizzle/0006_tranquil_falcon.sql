@@ -1,0 +1,1 @@
+ALTER TABLE `userProfiles` MODIFY COLUMN `birthDate` varchar(10);

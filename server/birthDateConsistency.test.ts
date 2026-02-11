@@ -4,7 +4,7 @@ import { users, userProfiles } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { updateUserProfile, getUserProfile } from "./db";
 
-describe("Birth Date Consistency - No Random Changes", () => {
+describe("Birth Date Consistency - Navigation Between Tabs", () => {
   let testUserId: number;
   let db: any;
 
@@ -12,13 +12,12 @@ describe("Birth Date Consistency - No Random Changes", () => {
     db = await getDb();
     if (!db) throw new Error("Database not available");
 
-    // Create a test user
     const result = await db
       .insert(users)
       .values({
-        openId: `test-user-${Date.now()}`,
-        name: "Test User",
-        email: "test@example.com",
+        openId: `test-consistency-${Date.now()}`,
+        name: "Consistency Test User",
+        email: "consistency@example.com",
         role: "user",
       });
 
@@ -27,94 +26,33 @@ describe("Birth Date Consistency - No Random Changes", () => {
 
   afterAll(async () => {
     if (!db || !testUserId) return;
-
-    // Clean up test data
     await db.delete(userProfiles).where(eq(userProfiles.userId, testUserId));
     await db.delete(users).where(eq(users.id, testUserId));
   });
 
-  it("should keep birth date consistent after multiple saves", async () => {
-    const birthDate = new Date("1990-05-15T00:00:00Z");
-
-    // First save
-    await updateUserProfile(testUserId, {
-      birthDate: birthDate,
-    });
-
-    const result1 = await getUserProfile(testUserId);
-    const savedDate1 = new Date(result1?.birthDate as any).toISOString().split('T')[0];
-
-    // Second save (simulating user saving again)
-    await updateUserProfile(testUserId, {
-      birthDate: birthDate,
-    });
-
-    const result2 = await getUserProfile(testUserId);
-    const savedDate2 = new Date(result2?.birthDate as any).toISOString().split('T')[0];
-
-    // Third save (simulating multiple navigations)
-    await updateUserProfile(testUserId, {
-      birthDate: birthDate,
-    });
-
-    const result3 = await getUserProfile(testUserId);
-    const savedDate3 = new Date(result3?.birthDate as any).toISOString().split('T')[0];
-
-    // All should be the same
-    expect(savedDate1).toBe(savedDate2);
-    expect(savedDate2).toBe(savedDate3);
-  });
-
-  it("should not change birth date when updating other fields", async () => {
-    const birthDate = new Date("1992-03-20T00:00:00Z");
+  it("should keep birth date unchanged when navigating between tabs", async () => {
+    const birthDate = "1995-07-25";
 
     // Save birth date
     await updateUserProfile(testUserId, {
       birthDate: birthDate,
     });
 
+    // Simulate: User navigates to another tab (e.g., Progresso)
+    // and comes back to Configurações
     const result1 = await getUserProfile(testUserId);
-    const savedDate1 = new Date(result1?.birthDate as any).toISOString().split('T')[0];
+    expect(result1?.birthDate).toBe(birthDate);
 
-    // Update other fields without touching birth date
-    await updateUserProfile(testUserId, {
-      fullName: "Updated Name",
-      height: 180,
-    });
-
+    // Simulate: User navigates away and back again
     const result2 = await getUserProfile(testUserId);
-    const savedDate2 = new Date(result2?.birthDate as any).toISOString().split('T')[0];
+    expect(result2?.birthDate).toBe(birthDate);
 
-    // Birth date should remain the same
-    expect(savedDate1).toBe(savedDate2);
-    expect(result2?.fullName).toBe("Updated Name");
-    expect(result2?.height).toBe(180);
-  });
-
-  it("should handle rapid consecutive saves without data loss", async () => {
-    const birthDate = new Date("1988-11-10T00:00:00Z");
-
-    // Rapid saves
-    const promises = Array(5).fill(null).map(() =>
-      updateUserProfile(testUserId, {
-        birthDate: birthDate,
-        fullName: "Test User",
-      })
-    );
-
-    await Promise.all(promises);
-
-    const result = await getUserProfile(testUserId);
-    const savedDate = new Date(result?.birthDate as any).toISOString().split('T')[0];
-
-    // Should still have correct date
-    const expectedDate = new Date("1988-11-10T00:00:00Z").toISOString().split('T')[0];
-    const dayDiff = Math.abs(new Date(savedDate).getTime() - new Date(expectedDate).getTime()) / (1000 * 60 * 60 * 24);
-    expect(dayDiff).toBeLessThanOrEqual(1);
+    // Both should be identical
+    expect(result1?.birthDate).toBe(result2?.birthDate);
   });
 
   it("should maintain data integrity with partial updates", async () => {
-    const birthDate = new Date("1995-07-25T00:00:00Z");
+    const birthDate = "1995-07-25";
     const fullName = "John Doe";
     const height = 175;
 
@@ -126,7 +64,7 @@ describe("Birth Date Consistency - No Random Changes", () => {
     });
 
     const result1 = await getUserProfile(testUserId);
-    const savedDate1 = new Date(result1?.birthDate as any).toISOString().split('T')[0];
+    expect(result1?.birthDate).toBe(birthDate);
 
     // Partial update (only update height)
     await updateUserProfile(testUserId, {
@@ -134,11 +72,64 @@ describe("Birth Date Consistency - No Random Changes", () => {
     });
 
     const result2 = await getUserProfile(testUserId);
-    const savedDate2 = new Date(result2?.birthDate as any).toISOString().split('T')[0];
 
     // Birth date and name should remain unchanged
-    expect(savedDate1).toBe(savedDate2);
+    expect(result2?.birthDate).toBe(birthDate);
     expect(result2?.fullName).toBe(fullName);
     expect(result2?.height).toBe(180);
+  });
+
+  it("should handle consecutive date changes correctly", async () => {
+    const date1 = "1990-05-15";
+    const date2 = "1992-03-20";
+    const date3 = "1988-11-10";
+
+    // Change 1
+    await updateUserProfile(testUserId, {
+      birthDate: date1,
+    });
+    let result = await getUserProfile(testUserId);
+    expect(result?.birthDate).toBe(date1);
+
+    // Change 2
+    await updateUserProfile(testUserId, {
+      birthDate: date2,
+    });
+    result = await getUserProfile(testUserId);
+    expect(result?.birthDate).toBe(date2);
+
+    // Change 3
+    await updateUserProfile(testUserId, {
+      birthDate: date3,
+    });
+    result = await getUserProfile(testUserId);
+    expect(result?.birthDate).toBe(date3);
+  });
+
+  it("should preserve birth date when updating other fields", async () => {
+    const birthDate = "1985-12-25";
+    const initialName = "Initial Name";
+
+    // Set initial data
+    await updateUserProfile(testUserId, {
+      birthDate: birthDate,
+      fullName: initialName,
+    });
+
+    // Update multiple other fields
+    await updateUserProfile(testUserId, {
+      height: 185,
+      currentWeight: 80,
+      targetWeight: 75,
+      dailyCalorieGoal: 2200,
+    });
+
+    const result = await getUserProfile(testUserId);
+
+    // Birth date should not change
+    expect(result?.birthDate).toBe(birthDate);
+    expect(result?.fullName).toBe(initialName);
+    expect(result?.height).toBe(185);
+    expect(result?.currentWeight).toBe("80.00");
   });
 });

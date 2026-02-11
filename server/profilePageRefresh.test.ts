@@ -36,7 +36,7 @@ describe("Profile Data Persistence - Page Refresh Scenario", () => {
     const personalInfo = {
       fullName: "Maria Silva Santos",
       sex: "female" as const,
-      birthDate: new Date("1992-03-20"),
+      birthDate: "1992-03-20",
       mainObjective: "lose_fat" as const,
     };
 
@@ -81,7 +81,7 @@ describe("Profile Data Persistence - Page Refresh Scenario", () => {
     const tab1Data = {
       fullName: "João Pedro",
       sex: "male" as const,
-      birthDate: new Date("1988-11-10"),
+      birthDate: "1988-11-10",
     };
 
     await updateUserProfile(testUserId, tab1Data);
@@ -111,7 +111,7 @@ describe("Profile Data Persistence - Page Refresh Scenario", () => {
     const initialProfile = {
       fullName: "Complete Profile",
       sex: "female" as const,
-      birthDate: new Date("1995-05-15"),
+      birthDate: "1995-05-15",
       mainObjective: "maintain" as const,
       height: 170,
       currentWeight: 65,
@@ -146,7 +146,7 @@ describe("Profile Data Persistence - Page Refresh Scenario", () => {
     const profileData = {
       fullName: "Test User Complete",
       sex: "male" as const,
-      birthDate: new Date("1990-01-01"),
+      birthDate: "1990-01-01",
       mainObjective: "gain_muscle" as const,
       height: 180,
       currentWeight: 85,

@@ -96,7 +96,7 @@ export const appRouter = router({
         await upsertUserProfile({
           userId: ctx.user.id,
           sex: input.sex,
-          birthDate: new Date(input.birthDate),
+          birthDate: input.birthDate ? (() => { const d = new Date(input.birthDate); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`; })() : undefined,
           height: input.height,
           currentWeight: String(input.currentWeight),
           targetWeight: String(input.targetWeight),
