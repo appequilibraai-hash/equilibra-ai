@@ -648,44 +648,83 @@ interface FoodAnalysisResult {
 }
 
 async function analyzeFood(imageUrl: string): Promise<FoodAnalysisResult> {
-  const systemPrompt = `Você é um nutricionista especialista em análise de alimentos por imagem. 
-Analise a foto da refeição e forneça informações nutricionais detalhadas em português brasileiro.
-Seja preciso nas estimativas de porções e valores nutricionais.
-Considere todos os ingredientes visíveis, incluindo molhos, temperos e acompanhamentos.`;
+  const systemPrompt = `### ROLE
+You are an expert AI Nutritionist and Computer Vision Specialist. Your goal is to analyze food images to identify ingredients and estimate their mass (in grams) with high precision using volumetric analysis.
+Always respond in Brazilian Portuguese (pt-BR) for food names and notes.
 
-  const userPrompt = `Analise esta imagem de refeição e forneça uma análise nutricional completa.
+### CORE INSTRUCTION
+Analyze the provided image. You must detect food items, estimate their volume based on visual scale, and convert that volume to mass using standard cooked food densities.
 
-Retorne um JSON com a seguinte estrutura:
+### ANALYSIS PROTOCOL (STEP-BY-STEP)
+
+1. **SCALE & REFERENCE DETECTION (The "Cutlery Anchor"):**
+   * **Primary Search:** Look for a standard utensil (fork, knife, spoon) placed next to the food.
+     * *Assumption:* Standard dinner fork/knife length ≈ 20 cm (8 inches).
+     * *Calculation:* Use this object to establish a **Pixels-Per-Centimeter (PPCM)** ratio.
+   * **Secondary Search (Container Context):** If no utensil is found, identify the container type.
+     * *Standard Plate:* Assume 25cm (10 inches) diameter.
+     * *Takeout Box (Marmita):* Assume standard medium volume (approx. 500-600ml capacity).
+     * *Bowl:* Assume standard 15cm diameter.
+
+2. **VOLUME ESTIMATION:**
+   * **Segmentation:** Identify each distinct food component (e.g., rice, beans, protein, salad).
+   * **Area:** Estimate the surface area (cm²) each item covers based on the PPCM ratio.
+   * **Depth/Height:** Estimate the pile height (e.g., "flat layer" ≈ 1-2cm, "heaped" ≈ 3-5cm).
+   * **Volume Calculation:** Volume (cm³) = Area × Estimated Height.
+
+3. **DENSITY CONVERSION (Physics):**
+   * Convert Volume to Mass using **Cooked Density** factors (since food is plated).
+   * *Examples:*
+     * Cooked Rice/Grains: ~0.70 g/cm³
+     * Cooked Beans/Legumes: ~0.85 g/cm³
+     * Grilled Meat/Poultry: ~1.00 g/cm³
+     * Leafy Greens (Loose): ~0.10 g/cm³
+   * *Formula:* Mass (g) = Volume (cm³) × Density (g/cm³).
+
+4. **MACRONUTRIENT ESTIMATION:**
+   * Based on the estimated mass, calculate: Calories, Protein (g), Carbs (g), Fats (g).
+   * Also estimate: Fiber (g), Sugar (g), Sodium (mg).
+   * Also estimate micronutrients when possible.`;
+
+  const userPrompt = `Analyze this meal image using the volumetric analysis protocol.
+
+Return a JSON with the following structure:
 {
-  "totalCalories": número total de calorias estimado,
-  "totalProtein": gramas de proteína total,
-  "totalCarbs": gramas de carboidratos total,
-  "totalFat": gramas de gordura total,
-  "totalFiber": gramas de fibra total,
-  "totalSugar": gramas de açúcar total,
-  "totalSodium": miligramas de sódio total,
+  "analysis_chain_of_thought": "Briefly explain the scale used and volume calculations",
+  "scale_reference_used": "Utensil" | "Plate" | "Container" | "None (Estimation)",
+  "totalCalories": total calories number,
+  "totalProtein": total protein in grams,
+  "totalCarbs": total carbs in grams,
+  "totalFat": total fat in grams,
+  "totalFiber": total fiber in grams,
+  "totalSugar": total sugar in grams,
+  "totalSodium": total sodium in milligrams,
   "detectedFoods": [
     {
-      "name": "nome do alimento em português",
-      "quantity": "quantidade estimada (ex: 150g, 1 unidade)",
-      "calories": calorias deste item,
-      "protein": proteína em gramas,
-      "carbs": carboidratos em gramas,
-      "fat": gordura em gramas,
-      "confidence": nível de confiança 0-100
+      "name": "food name in Brazilian Portuguese",
+      "quantity": "estimated quantity (e.g., 150g)",
+      "calories": calories for this item,
+      "protein": protein in grams,
+      "carbs": carbs in grams,
+      "fat": fat in grams,
+      "confidence": confidence level 0-100,
+      "estimated_volume_cm3": estimated volume in cm³,
+      "density_factor": density factor used (g/cm³),
+      "visual_description": "brief visual description of the portion"
     }
   ],
-  "detectedSauces": ["lista de molhos identificados"],
-  "detectedIngredients": ["lista de todos os ingredientes visíveis"],
+  "detectedSauces": ["list of detected sauces in Portuguese"],
+  "detectedIngredients": ["list of all visible ingredients in Portuguese"],
   "micronutrients": [
     {
-      "name": "nome do micronutriente",
-      "amount": quantidade,
-      "unit": "unidade (mg, mcg, IU)",
-      "percentDailyValue": porcentagem do valor diário recomendado
+      "name": "micronutrient name in Portuguese",
+      "amount": amount number,
+      "unit": "unit (mg, mcg, IU)",
+      "percentDailyValue": percentage of daily recommended value
     }
   ],
-  "analysisNotes": "observações sobre a refeição, dicas de saúde relacionadas"
+  "analysisNotes": "observations about the meal, health tips. Include the analysis chain of thought here.",
+  "user_feedback_hint": "If confidence is low, suggest improvements for next photo"
 }`;
 
   try {
@@ -708,6 +747,8 @@ Retorne um JSON com a seguinte estrutura:
           schema: {
             type: "object",
             properties: {
+              analysis_chain_of_thought: { type: "string" },
+              scale_reference_used: { type: "string" },
               totalCalories: { type: "number" },
               totalProtein: { type: "number" },
               totalCarbs: { type: "number" },
@@ -726,9 +767,12 @@ Retorne um JSON com a seguinte estrutura:
                     protein: { type: "number" },
                     carbs: { type: "number" },
                     fat: { type: "number" },
-                    confidence: { type: "number" }
+                    confidence: { type: "number" },
+                    estimated_volume_cm3: { type: "number" },
+                    density_factor: { type: "number" },
+                    visual_description: { type: "string" }
                   },
-                  required: ["name", "quantity", "calories", "protein", "carbs", "fat", "confidence"],
+                  required: ["name", "quantity", "calories", "protein", "carbs", "fat", "confidence", "estimated_volume_cm3", "density_factor", "visual_description"],
                   additionalProperties: false
                 }
               },
@@ -748,9 +792,10 @@ Retorne um JSON com a seguinte estrutura:
                   additionalProperties: false
                 }
               },
-              analysisNotes: { type: "string" }
+              analysisNotes: { type: "string" },
+              user_feedback_hint: { type: "string" }
             },
-            required: ["totalCalories", "totalProtein", "totalCarbs", "totalFat", "totalFiber", "totalSugar", "totalSodium", "detectedFoods", "detectedSauces", "detectedIngredients", "micronutrients", "analysisNotes"],
+            required: ["analysis_chain_of_thought", "scale_reference_used", "totalCalories", "totalProtein", "totalCarbs", "totalFat", "totalFiber", "totalSugar", "totalSodium", "detectedFoods", "detectedSauces", "detectedIngredients", "micronutrients", "analysisNotes", "user_feedback_hint"],
             additionalProperties: false
           }
         }

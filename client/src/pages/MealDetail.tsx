@@ -214,12 +214,15 @@ export default function MealDetail() {
                     <div>
                       <h4 className="font-medium text-foreground">{food.name}</h4>
                       <p className="text-sm text-muted-foreground">{food.quantity}</p>
+                      {food.visual_description && (
+                        <p className="text-xs text-muted-foreground italic mt-1">{food.visual_description}</p>
+                      )}
                     </div>
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className={`text-xs ${food.confidence >= 80 ? 'bg-green-100 text-green-700' : food.confidence >= 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
                       {food.confidence}% confiança
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-4 gap-2 text-sm">
+                  <div className="grid grid-cols-4 gap-2 text-sm mb-2">
                     <div className="text-center p-2 bg-orange-50 rounded">
                       <p className="font-medium text-orange-600">{food.calories}</p>
                       <p className="text-xs text-orange-600/80">kcal</p>
@@ -237,6 +240,16 @@ export default function MealDetail() {
                       <p className="text-xs text-yellow-600/80">Gord</p>
                     </div>
                   </div>
+                  {(food.estimated_volume_cm3 || food.density_factor) && (
+                    <div className="flex gap-4 text-xs text-muted-foreground mt-2 pt-2 border-t">
+                      {food.estimated_volume_cm3 && (
+                        <span className="text-blue-600">Volume: {food.estimated_volume_cm3} cm³</span>
+                      )}
+                      {food.density_factor && (
+                        <span className="text-purple-600">Densidade: {food.density_factor} g/cm³</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

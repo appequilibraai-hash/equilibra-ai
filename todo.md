@@ -211,3 +211,9 @@
 - [x] Garantir que useEffect carrega dados ao montar a página
 - [x] Remover refetch() que causava sobrescrita de dados
 - [x] Testar que dados persistem após atualizar a página
+
+
+## Prompt Avançado de Análise Nutricional
+
+- [x] Integrar prompt avançado com estimativa volumétrica e de densidade
+- [x] Atualizar frontend para exibir novos campos (volume, densidade, confiança, dica de feedback)
