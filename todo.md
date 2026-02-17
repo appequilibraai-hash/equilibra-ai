@@ -220,6 +220,6 @@
 
 ## Deploy no VPS - Correções OAuth
 
-- [ ] Remover completamente Manus OAuth do código
-- [ ] Corrigir rota /api/oauth/callback para redirecionar para login
-- [ ] Testar site no VPS appequilibraai.com.br
+- [x] Remover completamente Manus OAuth do código
+- [x] Corrigir rota /api/oauth/callback para redirecionar para login
+- [x] Testar site no VPS appequilibraai.com.br
