@@ -7,10 +7,12 @@ export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
-  email: varchar("email", { length: 320 }),
+  email: varchar("email", { length: 320 }).unique(),
   username: varchar("username", { length: 64 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
+  password: varchar("password", { length: 255 }), // bcrypt hash for local auth
+  loginMethod: varchar("loginMethod", { length: 64 }).default("local"),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  isEmailVerified: int("isEmailVerified").default(0).notNull(), // 0 = false, 1 = true
   onboardingCompleted: int("onboardingCompleted").default(0).notNull(), // 0 = false, 1 = true
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

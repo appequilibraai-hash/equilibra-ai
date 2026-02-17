@@ -13,6 +13,7 @@ import ProfileProgress from "./pages/ProfileProgress";
 import ProfileRecommendations from "./pages/ProfileRecommendations";
 import ProfileSettings from "./pages/ProfileSettings";
 import MealDetail from "./pages/MealDetail";
+import { Login } from "./pages/Login";
 
 // Public routes with header navigation
 function PublicRoutes() {
@@ -23,6 +24,7 @@ function PublicRoutes() {
         <Route path="/analyze" component={AnalyzeMeal} />
         <Route path="/about" component={About} />
         <Route path="/onboarding" component={Onboarding} />
+        <Route path="/login" component={Login} />
         <Route component={NotFound} />
       </Switch>
     </PublicLayout>
@@ -53,6 +55,7 @@ function Router() {
       <Route path="/analyze" component={PublicRoutes} />
       <Route path="/about" component={PublicRoutes} />
       <Route path="/onboarding" component={PublicRoutes} />
+      <Route path="/login" component={PublicRoutes} />
       
       {/* Profile routes (logged in) */}
       <Route path="/profile" component={ProfileRoutes} />
