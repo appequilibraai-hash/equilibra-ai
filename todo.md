@@ -217,3 +217,9 @@
 
 - [x] Integrar prompt avançado com estimativa volumétrica e de densidade
 - [x] Atualizar frontend para exibir novos campos (volume, densidade, confiança, dica de feedback)
+
+## Deploy no VPS - Correções OAuth
+
+- [ ] Remover completamente Manus OAuth do código
+- [ ] Corrigir rota /api/oauth/callback para redirecionar para login
+- [ ] Testar site no VPS appequilibraai.com.br
