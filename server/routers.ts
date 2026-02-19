@@ -7,6 +7,7 @@ import { invokeLLM } from "./_core/llm";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { registerUser, loginUser } from "./auth.local";
+import { generateAndStoreResetToken, validateResetToken, resetPassword } from "./password-reset";
 import {
   getUserProfile,
   upsertUserProfile,
@@ -58,6 +59,31 @@ export const appRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, user.openId, cookieOptions);
         return { success: true, user };
+      }),
+    requestPasswordReset: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+      }))
+      .mutation(async ({ input }) => {
+        const token = await generateAndStoreResetToken(input.email);
+        return { success: true, token };
+      }),
+    validateResetToken: publicProcedure
+      .input(z.object({
+        token: z.string(),
+      }))
+      .query(async ({ input }) => {
+        const validation = await validateResetToken(input.token);
+        return { valid: validation !== null, email: validation?.email };
+      }),
+    resetPasswordWithToken: publicProcedure
+      .input(z.object({
+        token: z.string(),
+        newPassword: z.string().min(6),
+      }))
+      .mutation(async ({ input }) => {
+        const success = await resetPassword(input.token, input.newPassword);
+        return { success };
       }),
   }),
 

@@ -223,3 +223,27 @@
 - [x] Remover completamente Manus OAuth do código
 - [x] Corrigir rota /api/oauth/callback para redirecionar para login
 - [x] Testar site no VPS appequilibraai.com.br
+
+## Sistema de Recuperação de Senha
+
+- [ ] Adicionar campo password_reset_token na tabela users
+- [ ] Adicionar campo password_reset_expires na tabela users
+- [ ] Criar rota tRPC para solicitar reset de senha (enviar email)
+- [ ] Criar rota tRPC para validar token de reset
+- [ ] Criar rota tRPC para atualizar senha com token válido
+- [ ] Criar página de "Esqueci Minha Senha" (formulário com email)
+- [ ] Criar página de "Redefinir Senha" (com token na URL)
+- [ ] Integrar links de email com token
+- [ ] Testar fluxo completo de reset de senha
+
+## Sistema de Recuperação de Senha - CONCLUÍDO
+
+- [x] Adicionar campo password_reset_token na tabela users
+- [x] Adicionar campo password_reset_expires na tabela users
+- [x] Criar rota tRPC para solicitar reset de senha (enviar email)
+- [x] Criar rota tRPC para validar token de reset
+- [x] Criar rota tRPC para atualizar senha com token válido
+- [x] Criar página de "Esqueci Minha Senha" (formulário com email)
+- [x] Criar página de "Redefinir Senha" (com token na URL)
+- [x] Integrar links de email com token
+- [x] Adicionar link "Esqueci Minha Senha" na página de Login

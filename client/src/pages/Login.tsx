@@ -105,6 +105,18 @@ export function Login() {
               {isLoading ? "Loading..." : isLogin ? "Sign In" : "Create Account"}
             </Button>
 
+            {isLogin && (
+              <div className="text-center text-sm">
+                <button
+                  type="button"
+                  onClick={() => setLocation("/forgot-password")}
+                  className="text-teal-600 hover:underline font-medium"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
+            )}
+
             <div className="text-center text-sm">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button

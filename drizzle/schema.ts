@@ -17,10 +17,22 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  
+  // Password reset
+  passwordResetToken: varchar("passwordResetToken", { length: 255 }),
+  passwordResetExpires: timestamp("passwordResetExpires"),
 });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * Password reset token type
+ */
+export interface PasswordResetToken {
+  token: string;
+  expiresAt: Date;
+}
 
 /**
  * User profile with biometric data, nutritional goals and preferences

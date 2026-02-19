@@ -14,6 +14,8 @@ import ProfileRecommendations from "./pages/ProfileRecommendations";
 import ProfileSettings from "./pages/ProfileSettings";
 import MealDetail from "./pages/MealDetail";
 import { Login } from "./pages/Login";
+import { ForgotPassword } from "./pages/ForgotPassword";
+import { ResetPassword } from "./pages/ResetPassword";
 
 // Public routes with header navigation
 function PublicRoutes() {
@@ -25,6 +27,8 @@ function PublicRoutes() {
         <Route path="/about" component={About} />
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/login" component={Login} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route component={NotFound} />
       </Switch>
     </PublicLayout>
@@ -56,6 +60,8 @@ function Router() {
       <Route path="/about" component={PublicRoutes} />
       <Route path="/onboarding" component={PublicRoutes} />
       <Route path="/login" component={PublicRoutes} />
+      <Route path="/forgot-password" component={PublicRoutes} />
+      <Route path="/reset-password" component={PublicRoutes} />
       
       {/* Profile routes (logged in) */}
       <Route path="/profile" component={ProfileRoutes} />
