@@ -36,7 +36,10 @@ export async function registerUser(
 
   // Check if user already exists
   const existingUser = await db
-    .select()
+    .select({
+      id: users.id,
+      email: users.email,
+    })
     .from(users)
     .where(eq(users.email, email));
 
