@@ -34,18 +34,7 @@ export async function registerUser(
     throw new Error("Database not available");
   }
 
-  // Check if user already exists
-  const existingUser = await db
-    .select({
-      id: users.id,
-      email: users.email,
-    })
-    .from(users)
-    .where(eq(users.email, email));
-
-  if (existingUser.length > 0) {
-    throw new Error("User with this email already exists");
-  }
+  // We'll handle duplicate email errors when inserting
 
   // Hash password
   const hashedPassword = await hashPassword(password);
@@ -54,14 +43,22 @@ export async function registerUser(
   const openId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   // Create user
-  await db.insert(users).values({
-    openId,
-    email,
-    password: hashedPassword,
-    name: name || email.split("@")[0],
-    loginMethod: "local",
-    isEmailVerified: 0,
-  });
+  try {
+    await db.insert(users).values({
+      openId,
+      email,
+      password: hashedPassword,
+      name: name || email.split("@")[0],
+      loginMethod: "local",
+      isEmailVerified: 0,
+    });
+  } catch (error: any) {
+    // Check if it's a duplicate email error
+    if (error.message?.includes("UNIQUE") || error.message?.includes("Duplicate")) {
+      throw new Error("User with this email already exists");
+    }
+    throw error;
+  }
 
   // Return the created user data without fetching from DB
   // This avoids issues with SELECT queries on different database schemas
