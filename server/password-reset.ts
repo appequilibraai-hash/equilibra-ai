@@ -25,7 +25,10 @@ export async function generateAndStoreResetToken(email: string): Promise<string 
   const db = await ensureDb();
   
   const user = await db
-    .select()
+    .select({
+      id: users.id,
+      email: users.email,
+    })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
@@ -67,7 +70,12 @@ export async function validateResetToken(token: string): Promise<{ userId: numbe
     .digest("hex");
 
   const user = await db
-    .select()
+    .select({
+      id: users.id,
+      email: users.email,
+      passwordResetToken: users.passwordResetToken,
+      passwordResetExpires: users.passwordResetExpires,
+    })
     .from(users)
     .where(eq(users.passwordResetToken, hashedToken))
     .limit(1);

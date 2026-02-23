@@ -51,9 +51,14 @@ export async function requestEmailVerification(email: string): Promise<string> {
   const { token, hashedToken, expiresAt } = generateEmailVerificationToken();
   const db = await ensureDb();
 
-  // Find user by email
+  // Find user by email - select only fields that exist
   const user = await db
-    .select()
+    .select({
+      id: users.id,
+      email: users.email,
+      emailVerificationToken: users.emailVerificationToken,
+      emailVerificationExpires: users.emailVerificationExpires,
+    })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
@@ -87,9 +92,13 @@ export async function verifyEmailWithToken(token: string): Promise<boolean> {
     .digest("hex");
   const db = await ensureDb();
 
-  // Find user with matching token
+  // Find user with matching token - select only fields that exist
   const user = await db
-    .select()
+    .select({
+      id: users.id,
+      emailVerificationToken: users.emailVerificationToken,
+      emailVerificationExpires: users.emailVerificationExpires,
+    })
     .from(users)
     .where(eq(users.emailVerificationToken, hashedToken))
     .limit(1);
@@ -123,7 +132,10 @@ export async function isEmailVerified(userId: number): Promise<boolean> {
   const db = await ensureDb();
 
   const user = await db
-    .select()
+    .select({
+      id: users.id,
+      isEmailVerified: users.isEmailVerified,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);

@@ -60,9 +60,13 @@ export async function registerUser(
     isEmailVerified: 0,
   });
 
-  // Fetch the created user to get ID
+  // Fetch the created user to get ID - select only fields that exist
   const createdUser = await db
-    .select()
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+    })
     .from(users)
     .where(eq(users.email, email));
 
@@ -72,8 +76,8 @@ export async function registerUser(
 
   return {
     id: createdUser[0].id,
-    email,
-    name: name || email.split("@")[0],
+    email: createdUser[0].email || email,
+    name: createdUser[0].name || email.split("@")[0],
   };
 }
 
@@ -89,9 +93,15 @@ export async function loginUser(
     throw new Error("Database not available");
   }
 
-  // Find user by email
+  // Find user by email - select only fields that exist
   const userResult = await db
-    .select()
+    .select({
+      id: users.id,
+      email: users.email,
+      name: users.name,
+      password: users.password,
+      openId: users.openId,
+    })
     .from(users)
     .where(eq(users.email, email));
 
