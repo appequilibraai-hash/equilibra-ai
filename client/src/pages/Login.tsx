@@ -11,6 +11,7 @@ export function Login() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,12 +34,25 @@ export function Login() {
         await refetchAuth();
         setLocation("/");
       } else {
+        // Validar confirmação de senha
+        if (password !== confirmPassword) {
+          setError("As senhas não coincidem");
+          setIsLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError("A senha deve ter pelo menos 6 caracteres");
+          setIsLoading(false);
+          return;
+        }
+        
         await registerMutation.mutateAsync({ email, password, name });
         // After registration, show verification prompt
         setRegistrationEmail(email);
         setShowVerificationPrompt(true);
         setEmail("");
         setPassword("");
+        setConfirmPassword("");
         setName("");
       }
     } catch (err) {
@@ -114,6 +128,21 @@ export function Login() {
                 minLength={6}
               />
             </div>
+
+            {!isLogin && (
+              <div>
+                <label className="text-sm font-medium">Confirmar Senha</label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isLoading}
+                  minLength={6}
+                />
+              </div>
+            )}
 
             {error && (
               <div className={`border rounded p-3 text-sm ${

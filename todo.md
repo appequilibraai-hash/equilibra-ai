@@ -257,3 +257,10 @@
 - [x] Criar página de confirmação de email no frontend
 - [x] Testar fluxo completo de email verification (7 testes passando)
 - [ ] Fazer deploy no VPS
+
+## Confirmação de Senha no Registro
+
+- [x] Adicionar campo "Confirmar Senha" no formulário de registro
+- [x] Validar que as duas senhas coincidem
+- [x] Mostrar mensagem de erro se senhas não coincidem
+- [x] Validar comprimento mínimo de 6 caracteres
