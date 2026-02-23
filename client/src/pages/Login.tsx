@@ -14,9 +14,12 @@ export function Login() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [registrationEmail, setRegistrationEmail] = useState("");
+  const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
 
   const loginMutation = trpc.auth.login.useMutation();
   const registerMutation = trpc.auth.register.useMutation();
+  const sendVerificationMutation = trpc.auth.sendVerificationEmail.useMutation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,15 +29,36 @@ export function Login() {
     try {
       if (isLogin) {
         await loginMutation.mutateAsync({ email, password });
+        // Refetch auth and redirect
+        await refetchAuth();
+        setLocation("/");
       } else {
         await registerMutation.mutateAsync({ email, password, name });
+        // After registration, show verification prompt
+        setRegistrationEmail(email);
+        setShowVerificationPrompt(true);
+        setEmail("");
+        setPassword("");
+        setName("");
       }
-
-      // Refetch auth and redirect
-      await refetchAuth();
-      setLocation("/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "Um erro ocorreu");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendVerification = async () => {
+    setError("");
+    setIsLoading(true);
+    try {
+      await sendVerificationMutation.mutateAsync({ email: registrationEmail });
+      setError("");
+      setShowVerificationPrompt(false);
+      setIsLogin(true);
+      setError("Um email de verificação foi enviado. Por favor, verifique seu email.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao enviar email de verificação");
     } finally {
       setIsLoading(false);
     }
@@ -44,21 +68,21 @@ export function Login() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{isLogin ? "Sign In" : "Create Account"}</CardTitle>
+          <CardTitle>{isLogin ? "Entrar" : "Criar Conta"}</CardTitle>
           <CardDescription>
             {isLogin
-              ? "Enter your email and password to sign in"
-              : "Create a new account to get started"}
+              ? "Digite seu email e senha para entrar"
+              : "Crie uma nova conta para começar"}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
               <div>
-                <label className="text-sm font-medium">Full Name</label>
+                <label className="text-sm font-medium">Nome Completo</label>
                 <Input
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="João Silva"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={isLoading}
@@ -70,7 +94,7 @@ export function Login() {
               <label className="text-sm font-medium">Email</label>
               <Input
                 type="email"
-                placeholder="you@example.com"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -79,7 +103,7 @@ export function Login() {
             </div>
 
             <div>
-              <label className="text-sm font-medium">Password</label>
+              <label className="text-sm font-medium">Senha</label>
               <Input
                 type="password"
                 placeholder="••••••••"
@@ -92,18 +116,24 @@ export function Login() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
+              <div className={`border rounded p-3 text-sm ${
+                showVerificationPrompt
+                  ? "bg-blue-50 border-blue-200 text-blue-700"
+                  : "bg-red-50 border-red-200 text-red-700"
+              }`}>
                 {error}
               </div>
             )}
 
-            <Button
-              type="submit"
-              className="w-full bg-teal-600 hover:bg-teal-700"
-              disabled={isLoading}
-            >
-              {isLoading ? "Loading..." : isLogin ? "Sign In" : "Create Account"}
-            </Button>
+            {!showVerificationPrompt && (
+              <Button
+                type="submit"
+                className="w-full bg-teal-600 hover:bg-teal-700"
+                disabled={isLoading}
+              >
+                {isLoading ? "Carregando..." : isLogin ? "Entrar" : "Criar Conta"}
+              </Button>
+            )}
 
             {isLogin && (
               <div className="text-center text-sm">
@@ -117,19 +147,51 @@ export function Login() {
               </div>
             )}
 
-            <div className="text-center text-sm">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError("");
-                }}
-                className="text-teal-600 hover:underline font-medium"
-              >
-                {isLogin ? "Sign up" : "Sign in"}
-              </button>
-            </div>
+            {!showVerificationPrompt && (
+              <div className="text-center text-sm">
+                {isLogin ? "Não tem uma conta? " : "Já tem uma conta? "}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setError("");
+                  }}
+                  className="text-teal-600 hover:underline font-medium"
+                >
+                  {isLogin ? "Criar conta" : "Entrar"}
+                </button>
+              </div>
+            )}
+
+            {showVerificationPrompt && (
+              <div className="space-y-3 border-t pt-4">
+                <p className="text-sm text-slate-600">
+                  Um email de verificação foi enviado para <strong>{registrationEmail}</strong>
+                </p>
+                <div className="space-y-2">
+                  <Button
+                    type="button"
+                    onClick={handleSendVerification}
+                    className="w-full bg-teal-600 hover:bg-teal-700"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Enviando..." : "Reenviar Email de Verificação"}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setShowVerificationPrompt(false);
+                      setIsLogin(true);
+                    }}
+                    variant="outline"
+                    className="w-full"
+                    disabled={isLoading}
+                  >
+                    Voltar para Login
+                  </Button>
+                </div>
+              </div>
+            )}
           </form>
         </CardContent>
       </Card>

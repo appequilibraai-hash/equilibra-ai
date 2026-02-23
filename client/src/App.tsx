@@ -16,6 +16,7 @@ import MealDetail from "./pages/MealDetail";
 import { Login } from "./pages/Login";
 import { ForgotPassword } from "./pages/ForgotPassword";
 import { ResetPassword } from "./pages/ResetPassword";
+import { VerifyEmail } from "./pages/VerifyEmail";
 
 // Public routes with header navigation
 function PublicRoutes() {
@@ -29,6 +30,7 @@ function PublicRoutes() {
         <Route path="/login" component={Login} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/verify-email" component={VerifyEmail} />
         <Route component={NotFound} />
       </Switch>
     </PublicLayout>

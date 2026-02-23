@@ -247,3 +247,13 @@
 - [x] Criar página de "Redefinir Senha" (com token na URL)
 - [x] Integrar links de email com token
 - [x] Adicionar link "Esqueci Minha Senha" na página de Login
+
+## Tradução e Email Verification
+
+- [x] Traduzir página de Login para Português do Brasil
+- [x] Traduzir página de Signup para Português do Brasil
+- [x] Atualizar schema do banco de dados para email verification
+- [x] Implementar lógica de verificação de email no backend
+- [x] Criar página de confirmação de email no frontend
+- [x] Testar fluxo completo de email verification (7 testes passando)
+- [ ] Fazer deploy no VPS

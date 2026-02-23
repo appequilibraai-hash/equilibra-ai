@@ -8,6 +8,7 @@ import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { registerUser, loginUser } from "./auth.local";
 import { generateAndStoreResetToken, validateResetToken, resetPassword } from "./password-reset";
+import { requestEmailVerification, verifyEmailWithToken, isEmailVerified } from "./email-verification";
 import {
   getUserProfile,
   upsertUserProfile,
@@ -84,6 +85,27 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const success = await resetPassword(input.token, input.newPassword);
         return { success };
+      }),
+    sendVerificationEmail: publicProcedure
+      .input(z.object({
+        email: z.string().email(),
+      }))
+      .mutation(async ({ input }) => {
+        const token = await requestEmailVerification(input.email);
+        return { success: true, token };
+      }),
+    verifyEmail: publicProcedure
+      .input(z.object({
+        token: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const success = await verifyEmailWithToken(input.token);
+        return { success };
+      }),
+    checkEmailVerified: protectedProcedure
+      .query(async ({ ctx }) => {
+        const verified = await isEmailVerified(ctx.user.id);
+        return { verified };
       }),
   }),
 

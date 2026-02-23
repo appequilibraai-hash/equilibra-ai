@@ -64,6 +64,13 @@
       "when": 1771478399586,
       "tag": "0008_thick_riptide",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1771826269175,
+      "tag": "0009_tricky_firelord",
+      "breakpoints": true
     }
   ]
 }
