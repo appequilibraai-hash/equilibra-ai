@@ -85,7 +85,25 @@ export async function getUserByOpenId(openId: string) {
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db.select({
+    id: users.id,
+    openId: users.openId,
+    name: users.name,
+    email: users.email,
+    username: users.username,
+    password: users.password,
+    loginMethod: users.loginMethod,
+    role: users.role,
+    isEmailVerified: users.isEmailVerified,
+    onboardingCompleted: users.onboardingCompleted,
+    createdAt: users.createdAt,
+    updatedAt: users.updatedAt,
+    lastSignedIn: users.lastSignedIn,
+    passwordResetToken: users.passwordResetToken,
+    passwordResetExpires: users.passwordResetExpires,
+    emailVerificationToken: users.emailVerificationToken,
+    emailVerificationExpires: users.emailVerificationExpires,
+  }).from(users).where(eq(users.openId, openId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
 }
