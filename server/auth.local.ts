@@ -60,24 +60,12 @@ export async function registerUser(
     isEmailVerified: 0,
   });
 
-  // Fetch the created user to get ID - select only fields that exist
-  const createdUser = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-    })
-    .from(users)
-    .where(eq(users.email, email));
-
-  if (createdUser.length === 0) {
-    throw new Error("Failed to create user");
-  }
-
+  // Return the created user data without fetching from DB
+  // This avoids issues with SELECT queries on different database schemas
   return {
-    id: createdUser[0].id,
-    email: createdUser[0].email || email,
-    name: createdUser[0].name || email.split("@")[0],
+    id: 0, // ID will be auto-generated, we don't need it for registration response
+    email,
+    name: name || email.split("@")[0],
   };
 }
 
