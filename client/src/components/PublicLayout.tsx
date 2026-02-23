@@ -65,14 +65,14 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   </Button>
                 </Link>
               ) : (
-                <a href={getLoginUrl()}>
+                <Link href="/login">
                   <Button 
                     variant="default" 
                     className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
                   >
                     Login
                   </Button>
-                </a>
+                </Link>
               )}
             </div>
           </nav>

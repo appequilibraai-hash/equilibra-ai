@@ -54,22 +54,12 @@ function ProfileRoutes() {
 function Router() {
   return (
     <Switch>
-      {/* Public routes */}
-      <Route path="/" component={PublicRoutes} />
-      <Route path="/analyze" component={PublicRoutes} />
-      <Route path="/about" component={PublicRoutes} />
-      <Route path="/onboarding" component={PublicRoutes} />
-      <Route path="/login" component={PublicRoutes} />
-      <Route path="/forgot-password" component={PublicRoutes} />
-      <Route path="/reset-password" component={PublicRoutes} />
-      
-      {/* Profile routes (logged in) */}
+      {/* Profile routes (logged in) - check first */}
       <Route path="/profile" component={ProfileRoutes} />
       <Route path="/profile/:rest*" component={ProfileRoutes} />
       
-      {/* 404 */}
-      <Route path="/404" component={NotFound} />
-      <Route component={NotFound} />
+      {/* All other routes go through PublicRoutes */}
+      <Route component={PublicRoutes} />
     </Switch>
   );
 }
