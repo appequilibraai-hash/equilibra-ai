@@ -42,13 +42,16 @@ export async function registerUser(
   // Generate unique openId
   const openId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  // Create user - insert only essential fields to avoid schema mismatch
+  // Create user
   try {
-    const userName = name || email.split("@")[0];
-    await db.execute(sql`
-      INSERT INTO users (openId, email, name, password, loginMethod, isEmailVerified)
-      VALUES (${openId}, ${email}, ${userName}, ${hashedPassword}, 'local', 0)
-    `);
+    await db.insert(users).values({
+      openId,
+      email,
+      password: hashedPassword,
+      name: name || email.split("@")[0],
+      loginMethod: "local",
+      isEmailVerified: 0,
+    });
   } catch (error: any) {
     if (error.message?.includes("UNIQUE") || error.message?.includes("Duplicate")) {
       throw new Error("User with this email already exists");

@@ -9,6 +9,8 @@ import { nanoid } from "nanoid";
 import { registerUser, loginUser } from "./auth.local";
 import { generateAndStoreResetToken, validateResetToken, resetPassword } from "./password-reset";
 import { requestEmailVerification, verifyEmailWithToken, isEmailVerified } from "./email-verification";
+import { getDb } from "./db";
+import { sql } from "drizzle-orm";
 import {
   getUserProfile,
   upsertUserProfile,
@@ -1170,3 +1172,27 @@ Retorne um JSON com:
     return { recommendations: [], supplements: [] };
   }
 }
+
+
+// ============ DEBUG ENDPOINT ============
+// Temporary endpoint to check database schema
+export const debugRouter = router({
+  schema: publicProcedure.query(async () => {
+    try {
+      const db = await getDb();
+      if (!db) return { error: "Database not available" };
+      
+      // Get table schema
+      const result = await db.execute(sql`
+        SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'users' AND TABLE_SCHEMA = DATABASE()
+        ORDER BY ORDINAL_POSITION
+      `);
+      
+      return { columns: result };
+    } catch (error: any) {
+      return { error: error.message };
+    }
+  }),
+});
