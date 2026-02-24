@@ -2,6 +2,13 @@ import crypto from "crypto";
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import sgMail from "@sendgrid/mail";
+
+// Initialize SendGrid
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
 
 async function ensureDb() {
   const db = await getDb();
@@ -30,18 +37,52 @@ export function generateEmailVerificationToken(): {
 }
 
 /**
- * Send email verification email
- * For now, just return the token (in production, send via email service)
+ * Send email verification email via SendGrid
  */
 export async function sendEmailVerificationEmail(
   email: string,
   token: string
 ): Promise<boolean> {
-  // In production, integrate with SendGrid/Mailgun here
-  // For now, just log it
-  console.log(`[EMAIL] Verification email would be sent to ${email}`);
-  console.log(`[EMAIL] Verification link: /verify-email?token=${token}`);
-  return true;
+  try {
+    if (!SENDGRID_API_KEY) {
+      console.log(`[EMAIL] SendGrid not configured. Token for ${email}: ${token}`);
+      return false;
+    }
+
+    // Build verification link
+    // In production, use your actual domain
+    const verificationLink = `https://equilibraai.manus.space/verify-email?token=${token}`;
+
+    const msg = {
+      to: email,
+      from: "noreply@equilibra-ai.com", // Change to your verified sender email
+      subject: "Verifique seu email - Equilibra AI",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2d9d78;">Bem-vindo ao Equilibra AI!</h2>
+          <p>Obrigado por se registrar. Para ativar sua conta, clique no link abaixo:</p>
+          <p>
+            <a href="${verificationLink}" style="background-color: #2d9d78; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">
+              Verificar Email
+            </a>
+          </p>
+          <p>Ou copie e cole este link no seu navegador:</p>
+          <p style="word-break: break-all; color: #666;">${verificationLink}</p>
+          <p style="color: #999; font-size: 12px;">Este link expira em 24 horas.</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          <p style="color: #999; font-size: 12px;">Equilibra AI - Sua alimentação sob controle total</p>
+        </div>
+      `,
+      text: `Clique aqui para verificar seu email: ${verificationLink}\n\nEste link expira em 24 horas.`,
+    };
+
+    await sgMail.send(msg);
+    console.log(`[EMAIL] Verification email sent to ${email}`);
+    return true;
+  } catch (error: any) {
+    console.error(`[EMAIL] Failed to send verification email to ${email}:`, error.message);
+    return false;
+  }
 }
 
 /**
