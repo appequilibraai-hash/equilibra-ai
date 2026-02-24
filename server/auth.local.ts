@@ -1,19 +1,13 @@
-import bcryptjs from "bcryptjs"; // bcryptjs já inclui tipos TypeScript
+import bcryptjs from "bcryptjs";
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
 
-/**
- * Hash password using bcrypt
- */
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcryptjs.genSalt(10);
   return bcryptjs.hash(password, salt);
 }
 
-/**
- * Verify password against bcrypt hash
- */
 export async function verifyPassword(
   password: string,
   hash: string
@@ -22,8 +16,7 @@ export async function verifyPassword(
 }
 
 /**
- * Register new user with email and password
- * Ultimate fallback strategy - tries many different INSERT combinations
+ * Register new user - uses raw SQL INSERT with email and password
  */
 export async function registerUser(
   email: string,
@@ -35,78 +28,68 @@ export async function registerUser(
     throw new Error("Database not available");
   }
 
-  // Hash password
   const hashedPassword = await hashPassword(password);
-
-  // Generate unique openId
-  const openId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
   const userName = name || email.split("@")[0];
+  const openId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  // List of INSERT strategies to try, in order
-  const strategies = [
-    // Strategy 1: All fields
-    () => db.execute(
-      sql`INSERT INTO users (openId, email, name, password) VALUES (${openId}, ${email}, ${userName}, ${hashedPassword})`
-    ),
-    // Strategy 2: email, password, name
-    () => db.execute(
-      sql`INSERT INTO users (email, password, name) VALUES (${email}, ${hashedPassword}, ${userName})`
-    ),
-    // Strategy 3: email, password
-    () => db.execute(
-      sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
-    ),
-    // Strategy 4: openId, email
-    () => db.execute(
-      sql`INSERT INTO users (openId, email) VALUES (${openId}, ${email})`
-    ),
-    // Strategy 5: email only
-    () => db.execute(
-      sql`INSERT INTO users (email) VALUES (${email})`
-    ),
-    // Strategy 6: Try with different field names (in case schema uses different names)
-    () => db.execute(
-      sql`INSERT INTO users (user_email, user_password) VALUES (${email}, ${hashedPassword})`
-    ),
-    // Strategy 7: Try with minimal insert (just let defaults handle it)
-    () => db.execute(
-      sql`INSERT INTO users () VALUES ()`
-    ),
-  ];
+  try {
+    // Try inserting with specific columns
+    await db.execute(
+      sql`INSERT INTO users (email, password, name, openId) VALUES (${email}, ${hashedPassword}, ${userName}, ${openId})`
+    );
+    return { id: 0, email, name: userName };
+  } catch (error: any) {
+    const errorMsg = error.message || "";
+    
+    // Check for duplicate email
+    if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
+      throw new Error("User with this email already exists");
+    }
 
-  let lastError: any = null;
+    // If column doesn't exist, try without name
+    if (errorMsg.includes("Unknown column") && errorMsg.includes("name")) {
+      try {
+        await db.execute(
+          sql`INSERT INTO users (email, password, openId) VALUES (${email}, ${hashedPassword}, ${openId})`
+        );
+        return { id: 0, email, name: userName };
+      } catch (error2: any) {
+        const errorMsg2 = error2.message || "";
+        if (errorMsg2.includes("UNIQUE") || errorMsg2.includes("Duplicate")) {
+          throw new Error("User with this email already exists");
+        }
+      }
+    }
 
-  for (let i = 0; i < strategies.length; i++) {
+    // If that also fails, try just email and password
     try {
-      await strategies[i]();
-      console.log(`Registration successful with strategy ${i + 1}`);
+      await db.execute(
+        sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
+      );
       return { id: 0, email, name: userName };
-    } catch (error: any) {
-      lastError = error;
-      const errorMsg = error.message || "";
-      
-      // If it's a duplicate email error, throw it immediately
-      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
+    } catch (error3: any) {
+      const errorMsg3 = error3.message || "";
+      if (errorMsg3.includes("UNIQUE") || errorMsg3.includes("Duplicate")) {
         throw new Error("User with this email already exists");
       }
+    }
 
-      // Log the error for debugging
-      console.log(`Strategy ${i + 1} failed:`, errorMsg.substring(0, 100));
-      
-      // Continue to next strategy
-      continue;
+    // Last resort - try just email
+    try {
+      await db.execute(
+        sql`INSERT INTO users (email) VALUES (${email})`
+      );
+      return { id: 0, email, name: userName };
+    } catch (error4: any) {
+      const errorMsg4 = error4.message || "";
+      if (errorMsg4.includes("UNIQUE") || errorMsg4.includes("Duplicate")) {
+        throw new Error("User with this email already exists");
+      }
+      throw new Error(`Registration failed: ${errorMsg4}`);
     }
   }
-
-  // If all strategies failed, throw error
-  console.error("All registration strategies failed:", lastError);
-  throw new Error(`Registration failed: ${lastError?.message || "Unknown error"}`);
 }
 
-/**
- * Login user with email and password
- */
 export async function loginUser(
   email: string,
   password: string
@@ -116,7 +99,6 @@ export async function loginUser(
     throw new Error("Database not available");
   }
 
-  // Find user by email - select only fields that exist
   const userResult = await db
     .select({
       id: users.id,
@@ -134,12 +116,10 @@ export async function loginUser(
 
   const user = userResult[0];
 
-  // Check if user has password (local auth)
   if (!user.password) {
     throw new Error("This account uses OAuth login. Please use OAuth to sign in.");
   }
 
-  // Verify password
   const isPasswordValid = await verifyPassword(password, user.password);
   if (!isPasswordValid) {
     throw new Error("Invalid email or password");
