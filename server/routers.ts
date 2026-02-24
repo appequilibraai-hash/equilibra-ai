@@ -40,7 +40,6 @@ const debugRouter = router({
       const db = await getDb();
       if (!db) return { error: "Database not available" };
       
-      // Get table schema
       const result = await db.execute(sql`
         SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT
         FROM INFORMATION_SCHEMA.COLUMNS
@@ -51,6 +50,23 @@ const debugRouter = router({
       return { columns: result };
     } catch (error: any) {
       return { error: error.message };
+    }
+  }),
+  testInsert: publicProcedure.mutation(async () => {
+    try {
+      const db = await getDb();
+      if (!db) return { error: "Database not available" };
+      
+      const result = await db.execute(
+        sql`INSERT INTO users (email) VALUES ('debug-test@test.com')`
+      );
+      
+      return { success: true, result };
+    } catch (error: any) {
+      return { 
+        error: error.message,
+        code: error.code
+      };
     }
   }),
 });
