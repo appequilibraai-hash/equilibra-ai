@@ -2,6 +2,7 @@ import bcryptjs from "bcryptjs";
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq, sql } from "drizzle-orm";
+import { v4 as uuidv4 } from "uuid";
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcryptjs.genSalt(10);
@@ -16,7 +17,7 @@ export async function verifyPassword(
 }
 
 /**
- * Register new user - simplified version
+ * Register new user - supports multiple schema variations
  */
 export async function registerUser(
   email: string,
@@ -30,39 +31,56 @@ export async function registerUser(
 
   const hashedPassword = await hashPassword(password);
   const userName = name || email.split("@")[0];
+  const openId = uuidv4(); // Generate unique openId
 
-  try {
-    // Simple insert with just email, password, and name
-    await db.execute(
-      sql`INSERT INTO users (email, password, name) VALUES (${email}, ${hashedPassword}, ${userName})`
-    );
-    return { id: 0, email, name: userName };
-  } catch (error: any) {
-    const errorMsg = error.message || "";
-    
-    // Check for duplicate email
-    if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
-      throw new Error("User with this email already exists");
-    }
+  // Try multiple INSERT strategies to handle different database schemas
+  const strategies = [
+    // Strategy 1: With openId (VPS schema)
+    async () => {
+      await db.execute(
+        sql`INSERT INTO users (openId, email, password, name) VALUES (${openId}, ${email}, ${hashedPassword}, ${userName})`
+      );
+    },
+    // Strategy 2: Without openId, with name
+    async () => {
+      await db.execute(
+        sql`INSERT INTO users (email, password, name) VALUES (${email}, ${hashedPassword}, ${userName})`
+      );
+    },
+    // Strategy 3: Without openId, without name
+    async () => {
+      await db.execute(
+        sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
+      );
+    },
+  ];
 
-    // If name column doesn't exist, try without it
-    if (errorMsg.includes("Unknown column") && errorMsg.includes("name")) {
-      try {
-        await db.execute(
-          sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
-        );
-        return { id: 0, email, name: userName };
-      } catch (error2: any) {
-        const errorMsg2 = error2.message || "";
-        if (errorMsg2.includes("UNIQUE") || errorMsg2.includes("Duplicate")) {
-          throw new Error("User with this email already exists");
-        }
-        throw new Error(`Registration failed: ${errorMsg2}`);
+  let lastError: Error | null = null;
+
+  for (const strategy of strategies) {
+    try {
+      await strategy();
+      return { id: 0, email, name: userName };
+    } catch (error: any) {
+      lastError = error;
+      const errorMsg = error.message || "";
+      
+      // If it's a duplicate email error, stop trying and throw immediately
+      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
+        throw new Error("User with this email already exists");
       }
+      
+      // Otherwise, continue to next strategy
+      continue;
     }
-
-    throw new Error(`Registration failed: ${errorMsg}`);
   }
+
+  // If all strategies failed, throw the last error
+  if (lastError) {
+    throw new Error(`Registration failed: ${lastError.message}`);
+  }
+
+  throw new Error("Registration failed: Unknown error");
 }
 
 export async function loginUser(
@@ -74,16 +92,36 @@ export async function loginUser(
     throw new Error("Database not available");
   }
 
-  const userResult = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      name: users.name,
-      password: users.password,
-      openId: users.openId,
-    })
-    .from(users)
-    .where(eq(users.email, email));
+  // Try to select with openId field first
+  let userResult: any[] = [];
+  
+  try {
+    userResult = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        password: users.password,
+        openId: users.openId,
+      })
+      .from(users)
+      .where(eq(users.email, email));
+  } catch (error: any) {
+    // If openId field doesn't exist, try without it
+    if (error.message?.includes("Unknown column") && error.message?.includes("openId")) {
+      userResult = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          name: users.name,
+          password: users.password,
+        })
+        .from(users)
+        .where(eq(users.email, email));
+    } else {
+      throw error;
+    }
+  }
 
   if (userResult.length === 0) {
     throw new Error("Invalid email or password");
@@ -104,6 +142,6 @@ export async function loginUser(
     id: user.id,
     email: user.email || "",
     name: user.name,
-    openId: user.openId,
+    openId: user.openId || email, // Fallback to email if openId doesn't exist
   };
 }
