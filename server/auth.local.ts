@@ -33,9 +33,9 @@ export async function registerUser(
   const openId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   try {
-    // Try inserting with specific columns
+    // Try inserting with email, password, and name (no openId)
     await db.execute(
-      sql`INSERT INTO users (email, password, name, openId) VALUES (${email}, ${hashedPassword}, ${userName}, ${openId})`
+      sql`INSERT INTO users (email, password, name) VALUES (${email}, ${hashedPassword}, ${userName})`
     );
     return { id: 0, email, name: userName };
   } catch (error: any) {
