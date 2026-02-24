@@ -23,7 +23,7 @@ export async function verifyPassword(
 
 /**
  * Register new user with email and password
- * Tries multiple INSERT strategies to work with different database schemas
+ * Uses multiple fallback strategies to work with different database schemas
  */
 export async function registerUser(
   email: string,
@@ -43,60 +43,86 @@ export async function registerUser(
   
   const userName = name || email.split("@")[0];
 
-  // Strategy 1: Try with all fields (openId, email, name, password)
-  try {
-    await db.execute(
-      sql`INSERT INTO users (openId, email, name, password) VALUES (${openId}, ${email}, ${userName}, ${hashedPassword})`
-    );
-    return { id: 0, email, name: userName };
-  } catch (error: any) {
-    const errorMsg = error.message || "";
-    
-    // If it's a duplicate email error, throw it
-    if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
-      throw new Error("User with this email already exists");
-    }
+  // Try different INSERT strategies based on what columns exist
+  let inserted = false;
+  let lastError: any = null;
 
-    // If it's an unknown column error, try Strategy 2
-    if (errorMsg.includes("Unknown column") || errorMsg.includes("no such column")) {
-      try {
-        // Strategy 2: Try with just email and password (minimal fields)
-        await db.execute(
-          sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
-        );
-        return { id: 0, email, name: userName };
-      } catch (error2: any) {
-        const errorMsg2 = error2.message || "";
-        
-        if (errorMsg2.includes("UNIQUE") || errorMsg2.includes("Duplicate") || error2.code === "ER_DUP_ENTRY") {
-          throw new Error("User with this email already exists");
-        }
-
-        // If Strategy 2 also fails, try Strategy 3
-        try {
-          // Strategy 3: Try with openId and email only
-          await db.execute(
-            sql`INSERT INTO users (openId, email) VALUES (${openId}, ${email})`
-          );
-          return { id: 0, email, name: userName };
-        } catch (error3: any) {
-          const errorMsg3 = error3.message || "";
-          
-          if (errorMsg3.includes("UNIQUE") || errorMsg3.includes("Duplicate") || error3.code === "ER_DUP_ENTRY") {
-            throw new Error("User with this email already exists");
-          }
-
-          // All strategies failed, throw the original error
-          console.error("Registration failed with all strategies:", error);
-          throw new Error(`Registration failed: ${errorMsg}`);
-        }
+  // Strategy 1: INSERT with all fields (openId, email, name, password)
+  if (!inserted) {
+    try {
+      await db.execute(
+        sql`INSERT INTO users (openId, email, name, password) VALUES (${openId}, ${email}, ${userName}, ${hashedPassword})`
+      );
+      inserted = true;
+    } catch (error: any) {
+      lastError = error;
+      const errorMsg = error.message || "";
+      
+      // If it's a duplicate email error, throw it
+      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
+        throw new Error("User with this email already exists");
       }
     }
-
-    // For other errors, throw them
-    console.error("Registration error:", error);
-    throw error;
   }
+
+  // Strategy 2: INSERT with email and password only
+  if (!inserted) {
+    try {
+      await db.execute(
+        sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
+      );
+      inserted = true;
+    } catch (error: any) {
+      lastError = error;
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
+        throw new Error("User with this email already exists");
+      }
+    }
+  }
+
+  // Strategy 3: INSERT with openId and email only
+  if (!inserted) {
+    try {
+      await db.execute(
+        sql`INSERT INTO users (openId, email) VALUES (${openId}, ${email})`
+      );
+      inserted = true;
+    } catch (error: any) {
+      lastError = error;
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
+        throw new Error("User with this email already exists");
+      }
+    }
+  }
+
+  // Strategy 4: INSERT with just email
+  if (!inserted) {
+    try {
+      await db.execute(
+        sql`INSERT INTO users (email) VALUES (${email})`
+      );
+      inserted = true;
+    } catch (error: any) {
+      lastError = error;
+      const errorMsg = error.message || "";
+      
+      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
+        throw new Error("User with this email already exists");
+      }
+    }
+  }
+
+  // If all strategies failed, throw error
+  if (!inserted) {
+    console.error("All registration strategies failed:", lastError);
+    throw new Error(`Registration failed: ${lastError?.message || "Unknown error"}`);
+  }
+
+  return { id: 0, email, name: userName };
 }
 
 /**
