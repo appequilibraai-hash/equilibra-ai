@@ -42,18 +42,11 @@ export async function registerUser(
   // Generate unique openId
   const openId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  // Create user
+  // Create user - insert only fields that exist in the database
   try {
-    await db.insert(users).values({
-      openId,
-      email,
-      password: hashedPassword,
-      name: name || email.split("@")[0],
-      loginMethod: "local",
-      isEmailVerified: 0,
-    });
+    await db.execute(sql`INSERT INTO users (openId, email, name, password) VALUES (${openId}, ${email}, ${name || email.split("@")[0]}, ${hashedPassword})`);
   } catch (error: any) {
-    if (error.message?.includes("UNIQUE") || error.message?.includes("Duplicate")) {
+    if (error.message?.includes("UNIQUE") || error.message?.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
       throw new Error("User with this email already exists");
     }
     throw error;
