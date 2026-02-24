@@ -16,7 +16,7 @@ export async function verifyPassword(
 }
 
 /**
- * Register new user - uses raw SQL INSERT with email and password
+ * Register new user - simplified version
  */
 export async function registerUser(
   email: string,
@@ -30,10 +30,9 @@ export async function registerUser(
 
   const hashedPassword = await hashPassword(password);
   const userName = name || email.split("@")[0];
-  const openId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   try {
-    // Try inserting with email, password, and name (no openId)
+    // Simple insert with just email, password, and name
     await db.execute(
       sql`INSERT INTO users (email, password, name) VALUES (${email}, ${hashedPassword}, ${userName})`
     );
@@ -46,11 +45,11 @@ export async function registerUser(
       throw new Error("User with this email already exists");
     }
 
-    // If column doesn't exist, try without name
+    // If name column doesn't exist, try without it
     if (errorMsg.includes("Unknown column") && errorMsg.includes("name")) {
       try {
         await db.execute(
-          sql`INSERT INTO users (email, password, openId) VALUES (${email}, ${hashedPassword}, ${openId})`
+          sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
         );
         return { id: 0, email, name: userName };
       } catch (error2: any) {
@@ -58,35 +57,11 @@ export async function registerUser(
         if (errorMsg2.includes("UNIQUE") || errorMsg2.includes("Duplicate")) {
           throw new Error("User with this email already exists");
         }
+        throw new Error(`Registration failed: ${errorMsg2}`);
       }
     }
 
-    // If that also fails, try just email and password
-    try {
-      await db.execute(
-        sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
-      );
-      return { id: 0, email, name: userName };
-    } catch (error3: any) {
-      const errorMsg3 = error3.message || "";
-      if (errorMsg3.includes("UNIQUE") || errorMsg3.includes("Duplicate")) {
-        throw new Error("User with this email already exists");
-      }
-    }
-
-    // Last resort - try just email
-    try {
-      await db.execute(
-        sql`INSERT INTO users (email) VALUES (${email})`
-      );
-      return { id: 0, email, name: userName };
-    } catch (error4: any) {
-      const errorMsg4 = error4.message || "";
-      if (errorMsg4.includes("UNIQUE") || errorMsg4.includes("Duplicate")) {
-        throw new Error("User with this email already exists");
-      }
-      throw new Error(`Registration failed: ${errorMsg4}`);
-    }
+    throw new Error(`Registration failed: ${errorMsg}`);
   }
 }
 
