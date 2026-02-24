@@ -32,6 +32,29 @@ import {
 } from "./db";
 import { DetectedFood, Micronutrient } from "../drizzle/schema";
 
+// ============ DEBUG ENDPOINT ============
+// Temporary endpoint to check database schema
+const debugRouter = router({
+  schema: publicProcedure.query(async () => {
+    try {
+      const db = await getDb();
+      if (!db) return { error: "Database not available" };
+      
+      // Get table schema
+      const result = await db.execute(sql`
+        SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_NAME = 'users' AND TABLE_SCHEMA = DATABASE()
+        ORDER BY ORDINAL_POSITION
+      `);
+      
+      return { columns: result };
+    } catch (error: any) {
+      return { error: error.message };
+    }
+  }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   
@@ -698,6 +721,7 @@ export const appRouter = router({
         };
       }),
   }),
+  debug: debugRouter,
 });
 
 export type AppRouter = typeof appRouter;
@@ -1174,25 +1198,4 @@ Retorne um JSON com:
 }
 
 
-// ============ DEBUG ENDPOINT ============
-// Temporary endpoint to check database schema
-export const debugRouter = router({
-  schema: publicProcedure.query(async () => {
-    try {
-      const db = await getDb();
-      if (!db) return { error: "Database not available" };
-      
-      // Get table schema
-      const result = await db.execute(sql`
-        SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_KEY, COLUMN_DEFAULT
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_NAME = 'users' AND TABLE_SCHEMA = DATABASE()
-        ORDER BY ORDINAL_POSITION
-      `);
-      
-      return { columns: result };
-    } catch (error: any) {
-      return { error: error.message };
-    }
-  }),
-});
+
