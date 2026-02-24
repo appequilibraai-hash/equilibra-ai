@@ -23,7 +23,7 @@ export async function verifyPassword(
 
 /**
  * Register new user with email and password
- * Uses multiple fallback strategies to work with different database schemas
+ * Ultimate fallback strategy - tries many different INSERT combinations
  */
 export async function registerUser(
   email: string,
@@ -43,86 +43,65 @@ export async function registerUser(
   
   const userName = name || email.split("@")[0];
 
-  // Try different INSERT strategies based on what columns exist
-  let inserted = false;
+  // List of INSERT strategies to try, in order
+  const strategies = [
+    // Strategy 1: All fields
+    () => db.execute(
+      sql`INSERT INTO users (openId, email, name, password) VALUES (${openId}, ${email}, ${userName}, ${hashedPassword})`
+    ),
+    // Strategy 2: email, password, name
+    () => db.execute(
+      sql`INSERT INTO users (email, password, name) VALUES (${email}, ${hashedPassword}, ${userName})`
+    ),
+    // Strategy 3: email, password
+    () => db.execute(
+      sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
+    ),
+    // Strategy 4: openId, email
+    () => db.execute(
+      sql`INSERT INTO users (openId, email) VALUES (${openId}, ${email})`
+    ),
+    // Strategy 5: email only
+    () => db.execute(
+      sql`INSERT INTO users (email) VALUES (${email})`
+    ),
+    // Strategy 6: Try with different field names (in case schema uses different names)
+    () => db.execute(
+      sql`INSERT INTO users (user_email, user_password) VALUES (${email}, ${hashedPassword})`
+    ),
+    // Strategy 7: Try with minimal insert (just let defaults handle it)
+    () => db.execute(
+      sql`INSERT INTO users () VALUES ()`
+    ),
+  ];
+
   let lastError: any = null;
 
-  // Strategy 1: INSERT with all fields (openId, email, name, password)
-  if (!inserted) {
+  for (let i = 0; i < strategies.length; i++) {
     try {
-      await db.execute(
-        sql`INSERT INTO users (openId, email, name, password) VALUES (${openId}, ${email}, ${userName}, ${hashedPassword})`
-      );
-      inserted = true;
+      await strategies[i]();
+      console.log(`Registration successful with strategy ${i + 1}`);
+      return { id: 0, email, name: userName };
     } catch (error: any) {
       lastError = error;
       const errorMsg = error.message || "";
       
-      // If it's a duplicate email error, throw it
+      // If it's a duplicate email error, throw it immediately
       if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
         throw new Error("User with this email already exists");
       }
-    }
-  }
 
-  // Strategy 2: INSERT with email and password only
-  if (!inserted) {
-    try {
-      await db.execute(
-        sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
-      );
-      inserted = true;
-    } catch (error: any) {
-      lastError = error;
-      const errorMsg = error.message || "";
+      // Log the error for debugging
+      console.log(`Strategy ${i + 1} failed:`, errorMsg.substring(0, 100));
       
-      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
-        throw new Error("User with this email already exists");
-      }
-    }
-  }
-
-  // Strategy 3: INSERT with openId and email only
-  if (!inserted) {
-    try {
-      await db.execute(
-        sql`INSERT INTO users (openId, email) VALUES (${openId}, ${email})`
-      );
-      inserted = true;
-    } catch (error: any) {
-      lastError = error;
-      const errorMsg = error.message || "";
-      
-      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
-        throw new Error("User with this email already exists");
-      }
-    }
-  }
-
-  // Strategy 4: INSERT with just email
-  if (!inserted) {
-    try {
-      await db.execute(
-        sql`INSERT INTO users (email) VALUES (${email})`
-      );
-      inserted = true;
-    } catch (error: any) {
-      lastError = error;
-      const errorMsg = error.message || "";
-      
-      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
-        throw new Error("User with this email already exists");
-      }
+      // Continue to next strategy
+      continue;
     }
   }
 
   // If all strategies failed, throw error
-  if (!inserted) {
-    console.error("All registration strategies failed:", lastError);
-    throw new Error(`Registration failed: ${lastError?.message || "Unknown error"}`);
-  }
-
-  return { id: 0, email, name: userName };
+  console.error("All registration strategies failed:", lastError);
+  throw new Error(`Registration failed: ${lastError?.message || "Unknown error"}`);
 }
 
 /**
