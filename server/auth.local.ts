@@ -33,54 +33,27 @@ export async function registerUser(
   const userName = name || email.split("@")[0];
   const openId = uuidv4(); // Generate unique openId
 
-  // Try multiple INSERT strategies to handle different database schemas
-  const strategies = [
-    // Strategy 1: With openId (VPS schema)
-    async () => {
-      await db.execute(
-        sql`INSERT INTO users (openId, email, password, name) VALUES (${openId}, ${email}, ${hashedPassword}, ${userName})`
-      );
-    },
-    // Strategy 2: Without openId, with name
-    async () => {
-      await db.execute(
-        sql`INSERT INTO users (email, password, name) VALUES (${email}, ${hashedPassword}, ${userName})`
-      );
-    },
-    // Strategy 3: Without openId, without name
-    async () => {
-      await db.execute(
-        sql`INSERT INTO users (email, password) VALUES (${email}, ${hashedPassword})`
-      );
-    },
-  ];
-
-  let lastError: Error | null = null;
-
-  for (const strategy of strategies) {
-    try {
-      await strategy();
-      return { id: 0, email, name: userName };
-    } catch (error: any) {
-      lastError = error;
-      const errorMsg = error.message || "";
-      
-      // If it's a duplicate email error, stop trying and throw immediately
-      if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
-        throw new Error("User with this email already exists");
-      }
-      
-      // Otherwise, continue to next strategy
-      continue;
+  // Insert user with required openId field
+  try {
+    await db.execute(
+      sql`INSERT INTO users (openId, email, password, name, role, isEmailVerified, onboardingCompleted) VALUES (${openId}, ${email}, ${hashedPassword}, ${userName}, 'user', 0, 0)`
+    );
+    return { id: 0, email, name: userName };
+  } catch (error: any) {
+    const errorMsg = error.message || "";
+    
+    // If it's a duplicate email error, provide user-friendly message
+    if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
+      throw new Error("User with this email already exists");
     }
+    
+    // If it's a duplicate openId error (very unlikely but possible)
+    if (errorMsg.includes("openId")) {
+      throw new Error("Registration failed: Please try again");
+    }
+    
+    throw new Error(`Registration failed: ${errorMsg}`);
   }
-
-  // If all strategies failed, throw the last error
-  if (lastError) {
-    throw new Error(`Registration failed: ${lastError.message}`);
-  }
-
-  throw new Error("Registration failed: Unknown error");
 }
 
 export async function loginUser(
