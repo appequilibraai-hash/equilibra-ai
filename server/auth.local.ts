@@ -36,7 +36,7 @@ export async function registerUser(
   // Insert user with required openId field
   try {
     await db.execute(
-      sql`INSERT INTO users (openId, email, password, name, role, isEmailVerified, onboardingCompleted) VALUES (${openId}, ${email}, ${hashedPassword}, ${userName}, 'user', 0, 0)`
+      sql`INSERT INTO users (openId, email, password, name, role, isEmailVerified, onboardingCompleted) VALUES (${openId}, ${email}, ${hashedPassword}, ${userName}, 'user', 1, 0)`
     );
     return { id: 0, email, name: userName };
   } catch (error: any) {

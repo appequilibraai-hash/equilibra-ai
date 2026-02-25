@@ -1,0 +1,16 @@
+{
+  "query": "SELECT id, email, name, isEmailVerified FROM users WHERE email = 'matheusgilcontato@gmail.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2Z5LFN3SKCttBU8.root --database cZ9coAjzCR5yqyvaxCq6nk --execute SELECT id, email, name, isEmailVerified FROM users WHERE email = 'matheusgilcontato@gmail.com';",
+  "rows": [
+    {
+      "id": "1",
+      "email": "matheusgilcontato@gmail.com",
+      "name": "Matheus Eiras Gil",
+      "isEmailVerified": "0"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\tisEmailVerified\n1\tmatheusgilcontato@gmail.com\tMatheus Eiras Gil\t0\n",
+  "stderr": "",
+  "execution_time_ms": 363
+}
