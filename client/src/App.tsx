@@ -28,6 +28,7 @@ function PublicRoutes() {
         <Route path="/about" component={About} />
         <Route path="/onboarding" component={Onboarding} />
         <Route path="/login" component={Login} />
+        <Route path="/register" component={Login} />
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/verify-email" component={VerifyEmail} />
