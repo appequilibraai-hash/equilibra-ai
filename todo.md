@@ -293,3 +293,15 @@
 - [x] Adicionar rota tRPC para marcar onboarding como completo
 - [x] Todos os 78 testes passando
 - [x] Build compilado com sucesso
+
+
+## 📧 Integração SendGrid API - Implementada
+
+- [x] Guardar chave SendGrid como variável de ambiente segura (SENDGRID_API_KEY)
+- [x] email-verification.ts já usa API do SendGrid com sgMail.send()
+- [x] password-reset.ts já usa API do SendGrid com sgMail.send()
+- [x] Criado teste de validação de chave SendGrid (4 testes passando)
+- [x] Todos os 82 testes passando (78 anteriores + 4 novos)
+- [x] Build compilado com sucesso
+
+**Status:** Chave guardada com segurança. Emails serão enviados quando domínio for verificado no SendGrid.
