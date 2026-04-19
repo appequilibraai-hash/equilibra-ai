@@ -281,3 +281,15 @@
 - [x] Usar email verificado (appequilibraai@gmail.com) como remetente
 - [x] Todos os 78 testes passando
 - [x] Build compilado com sucesso
+
+
+## 🎯 Fluxo de Onboarding Obrigatório - Implementado
+
+- [x] Criar página CompleteProfile para onboarding
+- [x] Implementar roteamento condicional (verificar onboardingCompleted)
+- [x] Vincular dados do onboarding ao userProfiles
+- [x] Testar fluxo completo de email verification → login → onboarding → home
+- [x] Garantir que dados do onboarding apareçam em ProfileSettings
+- [x] Adicionar rota tRPC para marcar onboarding como completo
+- [x] Todos os 78 testes passando
+- [x] Build compilado com sucesso

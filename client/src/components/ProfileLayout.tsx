@@ -23,7 +23,7 @@ export default function ProfileLayout({ children }: ProfileLayoutProps) {
 
   // Check if onboarding is completed
   if (!loading && user && !(user as any).onboardingCompleted) {
-    return <Redirect to="/onboarding" />;
+    return <Redirect to="/complete-profile" />;
   }
 
   const tabs = [

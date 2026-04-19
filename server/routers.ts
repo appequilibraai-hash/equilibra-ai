@@ -30,6 +30,7 @@ import {
   getWeightHistory,
   getWeightProgress,
 } from "./db";
+
 import { DetectedFood, Micronutrient } from "../drizzle/schema";
 
 // ============ DEBUG ENDPOINT ============
@@ -347,6 +348,12 @@ export const appRouter = router({
       });
 
       return { dailyCalorieGoal, dailyProteinGoal, dailyCarbsGoal, dailyFatGoal };
+    }),
+
+    // Mark onboarding as completed
+    completeOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
+      await updateUserOnboarding(ctx.user.id, true);
+      return { success: true };
     }),
   }),
 
