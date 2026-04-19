@@ -55,7 +55,7 @@ export async function sendEmailVerificationEmail(
 
     const msg = {
       to: email,
-      from: "noreply@equilibra-ai.com", // SendGrid verified sender
+      from: "appequilibraai@gmail.com", // SendGrid verified sender
       subject: "Verifique seu email - Equilibra AI",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -117,9 +117,8 @@ export async function requestEmailVerification(email: string): Promise<string> {
     })
     .where(eq(users.id, user[0].id));
 
-  // Send email (disabled - configure SendGrid domain in panel first)
-  // await sendEmailVerificationEmail(email, token);
-  console.log(`[EMAIL] Email verification disabled. Token for ${email}: ${token}`);
+  // Send email via SendGrid
+  await sendEmailVerificationEmail(email, token);
 
   return token; // Return token for testing (in production, don't return)
 }

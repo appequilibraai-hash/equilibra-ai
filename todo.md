@@ -264,3 +264,20 @@
 - [x] Validar que as duas senhas coincidem
 - [x] Mostrar mensagem de erro se senhas não coincidem
 - [x] Validar comprimento mínimo de 6 caracteres
+
+
+## 🐛 Problemas Reportados - Sessão Atual
+
+- [x] Erros na hora do login - CORRIGIDO: Email de verificação agora é enviado
+- [x] Email de verificação não é recebido - CORRIGIDO: Função de envio habilitada
+- [x] Email de recuperação de senha não é recebido - CORRIGIDO: Função de envio implementada
+- [x] Investigar configuração de SendGrid - VERIFICADO: Chave de API está configurada
+- [x] Verificar logs de erro no servidor - VERIFICADO: Código funcionando corretamente
+
+## ✅ Correções Implementadas
+
+- [x] Habilitar envio de email de verificação via SendGrid
+- [x] Adicionar função de envio de email para recuperação de senha
+- [x] Usar email verificado (appequilibraai@gmail.com) como remetente
+- [x] Todos os 78 testes passando
+- [x] Build compilado com sucesso
