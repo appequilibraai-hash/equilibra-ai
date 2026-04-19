@@ -305,3 +305,15 @@
 - [x] Build compilado com sucesso
 
 **Status:** Chave guardada com segurança. Emails serão enviados quando domínio for verificado no SendGrid.
+
+
+## 🔐 Validações de Autenticação - Implementadas
+
+- [x] Adicionar validação de email duplicado no Sign Up
+- [x] Exibir mensagem "Email já cadastrado, esqueceu a senha?" se email existe
+- [x] Adicionar validação de email inválido no Sign In
+- [x] Exibir mensagem "Email inválido" se email não existe
+- [x] Atualizar UI para mostrar mensagens de erro em vermelho abaixo do campo
+- [x] Testar fluxos de Sign Up e Sign In com validações
+- [x] Todos os 82 testes passando
+- [x] Build compilado com sucesso

@@ -14,6 +14,7 @@ export function Login() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [registrationEmail, setRegistrationEmail] = useState("");
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false);
@@ -25,6 +26,7 @@ export function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setEmailError("");
     setIsLoading(true);
 
     try {
@@ -56,7 +58,15 @@ export function Login() {
         setName("");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Um erro ocorreu");
+      const errorMessage = err instanceof Error ? err.message : "Um erro ocorreu";
+      // Verificar se é erro de email
+      if (errorMessage.includes("Email já cadastrado") || errorMessage.includes("Email inválido")) {
+        setEmailError(errorMessage);
+        setError("");
+      } else {
+        setError(errorMessage);
+        setEmailError("");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -110,10 +120,17 @@ export function Login() {
                 type="email"
                 placeholder="seu@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailError("");
+                  }}
+                  required
+                  disabled={isLoading}
+                  className={emailError ? "border-red-500" : ""}
+                />
+                {emailError && (
+                  <p className="text-red-600 text-sm mt-1">{emailError}</p>
+                )}
             </div>
 
             <div>
@@ -184,6 +201,7 @@ export function Login() {
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setError("");
+                    setEmailError("");
                   }}
                   className="text-teal-600 hover:underline font-medium"
                 >

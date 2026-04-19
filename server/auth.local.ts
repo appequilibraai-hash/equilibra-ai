@@ -44,7 +44,7 @@ export async function registerUser(
     
     // If it's a duplicate email error, provide user-friendly message
     if (errorMsg.includes("UNIQUE") || errorMsg.includes("Duplicate") || error.code === "ER_DUP_ENTRY") {
-      throw new Error("User with this email already exists");
+      throw new Error("Email já cadastrado, esqueceu a senha?");
     }
     
     // If it's a duplicate openId error (very unlikely but possible)
@@ -97,7 +97,7 @@ export async function loginUser(
   }
 
   if (userResult.length === 0) {
-    throw new Error("Invalid email or password");
+    throw new Error("Email inválido");
   }
 
   const user = userResult[0];
@@ -108,7 +108,7 @@ export async function loginUser(
 
   const isPasswordValid = await verifyPassword(password, user.password);
   if (!isPasswordValid) {
-    throw new Error("Invalid email or password");
+    throw new Error("Senha incorreta");
   }
 
   return {
